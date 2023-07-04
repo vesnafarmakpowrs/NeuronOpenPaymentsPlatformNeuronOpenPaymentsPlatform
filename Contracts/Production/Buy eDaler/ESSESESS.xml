@@ -1,0 +1,146 @@
+<contract archiveOpt="P2Y" archiveReq="P1Y" canActAsTemplate="true" duration="P7D" id="BuyEDalerOppESSESESSProduction" visibility="PublicSearchable" xmlns="urn:ieee:iot:leg:sc:1.0">
+	<BuyEDaler serviceId="Production.ESSESESS" serviceProvider="TAG.Payments.OpenPaymentsPlatform.OpenPaymentsPlatformServiceProvider" xmlns="https://paiwise.tagroot.io/Schema/PaymentInstructions.xsd">
+		<Amount>
+			<ParameterReference parameter="Amount" />
+		</Amount>
+		<Currency>
+			<ParameterReference parameter="Currency" />
+		</Currency>
+	</BuyEDaler>
+	<role maxCount="1" minCount="1" name="Buyer">
+		<description xml:lang="en">
+			<paragraph>
+				<text>The party that will buy </text>
+				<italic>
+					<text>eDaler</text>
+				</italic>
+				<text>®</text>
+				<text>.</text>
+			</paragraph>
+		</description>
+	</role>
+	<role maxCount="1" minCount="1" name="TrustProvider">
+		<description xml:lang="en">
+			<paragraph>
+				<text>The Trust Provider selling </text>
+				<italic>
+					<text>eDaler</text>
+				</italic>
+				<text>® to the </text>
+				<italic>
+					<text>Buyer</text>
+				</italic>
+				<text>.</text>
+			</paragraph>
+		</description>
+	</role>
+	<parts>
+		<templateOnly />
+	</parts>
+	<parameters>
+		<numericalParameter name="Amount" min="0" minIncluded="false">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Amount of </text>
+					<italic>
+						<text>eDaler</text>
+					</italic>
+					<text>®</text>
+					<text> to buy.</text>
+				</paragraph>
+			</description>
+		</numericalParameter>
+		<stringParameter name="Currency" value="" regEx="[A-Z]{3}">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Currency of the transaction.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="Account" guide="IBAN" regEx="^(SE\s*\d{2}\s*\d{3}\s*\d{16}\s*\d)|(FI\s*\d{2}\s*\d{3}\s*\d{11})|(DE\s*\d{2}\s*\d{8}\s*\d{10})|(DK\s*\d{2}\s*\d{4}\s*\d{9}\s*\d)|(GB\s*\d{2}\s*[A-Z]{4}\s*\d{6}\s*\d{8})|(NO\s*\d{2}\s*\d{4}\s*\d{6}\s*\d)$">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Bank account number (in IBAN format) used when buying </text>
+					<italic>
+						<text>eDaler</text>
+					</italic>
+					<text>®</text>
+					<text>.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="Message" maxLength="10">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Text message to associate with bank transaction</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+	</parameters>
+	<humanReadableText xml:lang="en">
+		<section>
+			<header>
+				<text>Buy eDaler®</text>
+			</header>
+			<body>
+				<paragraph>
+					<text>The </text>
+					<bold>
+						<text>Buyer</text>
+					</bold>
+					<text> hereby agrees to buy </text>
+					<italic>
+						<text>eDaler</text>
+					</italic>
+					<text>® to the amount of </text>
+					<bold>
+						<parameter name="Amount" />
+						<text> </text>
+						<parameter name="Currency" />
+					</bold>
+					<text> from its bank account </text>
+					<bold>
+						<parameter name="Account" />
+					</bold>
+					<text> (IBAN format) via </text>
+					<bold>
+						<text>Skandinaviska Enskilda Banken AB</text>
+					</bold>
+					<text>.</text>
+				</paragraph>
+				<section>
+					<header>
+						<text>Transaction fees</text>
+					</header>
+					<body>
+						<paragraph>
+							<text>Normal operating and transaction fees are paid by the </text>
+							<bold>
+								<text>Buyer</text>
+							</bold>
+							<text>.</text>
+						</paragraph>
+					</body>
+				</section>
+				<section>
+					<header>
+						<text>Service Provider</text>
+					</header>
+					<body>
+						<paragraph>
+							<text>The Neuron® will use the </text>
+							<italic>
+								<text>Open Payments Platform</text>
+							</italic>
+							<text> to perform a direct bank transfer of the requested amount to the Neuron® operator. As soon as the transaction has been performed, the wallet of the </text>
+							<bold>
+								<text>Buyer</text>
+							</bold>
+							<text> will receive the corresponding amount of eDaler®.</text>
+						</paragraph>
+					</body>
+				</section>
+			</body>
+		</section>
+	</humanReadableText>
+</contract>

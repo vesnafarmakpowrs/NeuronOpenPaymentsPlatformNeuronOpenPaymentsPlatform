@@ -1,0 +1,163 @@
+<contract archiveOpt="P2Y" archiveReq="P1Y" canActAsTemplate="true" duration="P7D" id="SellEDalerOppHANDSESSProduction" visibility="PublicSearchable" xmlns="urn:ieee:iot:leg:sc:1.0">
+	<SellEDaler serviceId="Production.HANDSESS" serviceProvider="TAG.Payments.OpenPaymentsPlatform.OpenPaymentsPlatformServiceProvider" xmlns="https://paiwise.tagroot.io/Schema/PaymentInstructions.xsd">
+		<Amount>
+			<ParameterReference parameter="Amount" />
+		</Amount>
+		<Currency>
+			<ParameterReference parameter="Currency" />
+		</Currency>
+	</SellEDaler>
+	<role maxCount="1" minCount="1" name="Seller">
+		<description xml:lang="en">
+			<paragraph>
+				<text>The party that will sell </text>
+				<italic>
+					<text>eDaler</text>
+				</italic>
+				<text>®</text>
+				<text>.</text>
+			</paragraph>
+		</description>
+	</role>
+	<role maxCount="1" minCount="1" name="TrustProvider">
+		<description xml:lang="en">
+			<paragraph>
+				<text>The Trust Provider buying </text>
+				<italic>
+					<text>eDaler</text>
+				</italic>
+				<text>® from the </text>
+				<italic>
+					<text>Seller</text>
+				</italic>
+				<text>.</text>
+			</paragraph>
+		</description>
+	</role>
+	<parts>
+		<templateOnly />
+	</parts>
+	<parameters>
+		<numericalParameter name="Amount" min="0" minIncluded="false">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Amount of </text>
+					<italic>
+						<text>eDaler</text>
+					</italic>
+					<text>®</text>
+					<text> to sell.</text>
+				</paragraph>
+			</description>
+		</numericalParameter>
+		<stringParameter name="Currency" value="" regEx="[A-Z]{3}">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Currency of the transaction.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="Account" guide="IBAN" regEx="^(SE\s*\d{2}\s*\d{3}\s*\d{16}\s*\d)|(FI\s*\d{2}\s*\d{3}\s*\d{11})|(DE\s*\d{2}\s*\d{8}\s*\d{10})|(DK\s*\d{2}\s*\d{4}\s*\d{9}\s*\d)|(GB\s*\d{2}\s*[A-Z]{4}\s*\d{6}\s*\d{8})|(NO\s*\d{2}\s*\d{4}\s*\d{6}\s*\d)$">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Bank account number (in IBAN format) used when selling </text>
+					<italic>
+						<text>eDaler</text>
+					</italic>
+					<text>®</text>
+					<text>.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="AccountName" minLength="2">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Name associated with account.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="Message" maxLength="10">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Text message to associate with bank transaction</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+	</parameters>
+	<humanReadableText xml:lang="en">
+		<section>
+			<header>
+				<text>Sell eDaler®</text>
+			</header>
+			<body>
+				<paragraph>
+					<text>The </text>
+					<bold>
+						<text>Seller</text>
+					</bold>
+					<text> hereby agrees to sell </text>
+					<italic>
+						<text>eDaler</text>
+					</italic>
+					<text>® to the amount of </text>
+					<bold>
+						<parameter name="Amount" />
+						<text> </text>
+						<parameter name="Currency" />
+					</bold>
+					<text> to its bank account </text>
+					<bold>
+						<parameter name="Account" />
+					</bold>
+					<text> (IBAN format) via </text>
+					<bold>
+						<text>Handelsbanken</text>
+					</bold>
+					<text>.</text>
+				</paragraph>
+				<section>
+					<header>
+						<text>Transaction fees</text>
+					</header>
+					<body>
+						<paragraph>
+							<text>Normal operating and transaction fees are paid by the </text>
+							<bold>
+								<text>Seller</text>
+							</bold>
+							<text>.</text>
+						</paragraph>
+					</body>
+				</section>
+				<section>
+					<header>
+						<text>Service Provider</text>
+					</header>
+					<body>
+						<paragraph>
+							<text>The Neuron® will use the </text>
+							<italic>
+								<text>Open Payments Platform</text>
+							</italic>
+							<text> to perform a direct bank transfer of the requested amount from the Neuron® operator. The corresponding amount of eDaler® will be extracted from the wallet of the </text>
+							<bold>
+								<text>Seller</text>
+							</bold>
+							<text>.</text>
+						</paragraph>
+					</body>
+				</section>
+			</body>
+		</section>
+		<section>
+			<header>
+				<text>Transfer Date</text>
+			</header>
+			<body>
+				<paragraph>
+					<text>As the direct Open Banking platform requires manual human signatures for each direct transaction to be performed, the money will not be transferred to the bank account immediately upon signature. Instead, it will be transferred as soon as the operator is available to sign the transaction. This is typically within the next working day when the open banking platform is open and available.</text>
+				</paragraph>
+			</body>
+		</section>
+	</humanReadableText>
+</contract>

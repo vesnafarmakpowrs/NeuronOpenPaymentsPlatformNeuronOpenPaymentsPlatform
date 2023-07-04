@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Module xmlns="http://waher.se/Schema/ModuleManifest.xsd">
+	<Assembly fileName="TAG.Networking.OpenPaymentsPlatform.dll"/>
+	<Assembly fileName="TAG.Payments.OpenPaymentsPlatform.dll"/>
+	<Folder name="Root">
+		<Folder name="OpenPaymentsPlatform">
+			<Content fileName="OutgoingPayments.js"/>
+			<Content fileName="OutgoingPayments.md"/>
+			<Content fileName="Settings.js"/>
+			<Content fileName="Settings.md"/>
+			<Content fileName="Sniffer.md"/>
+		</Folder>
+	</Folder>
+</Module>

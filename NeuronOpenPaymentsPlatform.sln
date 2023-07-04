@@ -1,0 +1,101 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33424.131
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TAG.Networking.OpenPaymentsPlatform", "TAG.Networking.OpenPaymentsPlatform\TAG.Networking.OpenPaymentsPlatform.csproj", "{6C101798-32BB-4BC9-89AC-05B1FDE93010}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C668577E-B582-4B0E-BEE5-C909E262524B}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+		RegularExpressions.md = RegularExpressions.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TAG.Networking.OpenPaymentsPlatform.Test", "TAG.Networking.OpenPaymentsPlatform.Test\TAG.Networking.OpenPaymentsPlatform.Test.csproj", "{8CD18C92-737A-43C3-B36F-9771D5121590}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TAG.Payments.OpenPaymentsPlatform", "TAG.Payments.OpenPaymentsPlatform\TAG.Payments.OpenPaymentsPlatform.csproj", "{CBA3B037-3FDD-4944-B96C-39768449BB8E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contracts", "Contracts", "{2363390A-CAAB-4F28-8A63-64278802CA47}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sandbox", "Sandbox", "{8C453D4B-47BF-4EF8-96C7-2C969DB07785}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Production", "Production", "{1E1D3B3D-46A8-4397-AE3E-FB1371073A7D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Buy eDaler", "Buy eDaler", "{149B20D0-8010-496B-9900-08C5CB3F5A2D}"
+	ProjectSection(SolutionItems) = preProject
+		Contracts\Production\Buy eDaler\ELLFSESS.xml = Contracts\Production\Buy eDaler\ELLFSESS.xml
+		Contracts\Production\Buy eDaler\ESSESESS.xml = Contracts\Production\Buy eDaler\ESSESESS.xml
+		Contracts\Production\Buy eDaler\HANDSESS.xml = Contracts\Production\Buy eDaler\HANDSESS.xml
+		Contracts\Production\Buy eDaler\NDEASESS.xml = Contracts\Production\Buy eDaler\NDEASESS.xml
+		Contracts\Production\Buy eDaler\SWEDSESS.xml = Contracts\Production\Buy eDaler\SWEDSESS.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sell eDaler", "Sell eDaler", "{8A2185F3-D84B-4481-8E77-916537F3D8CF}"
+	ProjectSection(SolutionItems) = preProject
+		Contracts\Production\Sell eDaler\ELLFSESS.xml = Contracts\Production\Sell eDaler\ELLFSESS.xml
+		Contracts\Production\Sell eDaler\ESSESESS.xml = Contracts\Production\Sell eDaler\ESSESESS.xml
+		Contracts\Production\Sell eDaler\HANDSESS.xml = Contracts\Production\Sell eDaler\HANDSESS.xml
+		Contracts\Production\Sell eDaler\NDEASESS.xml = Contracts\Production\Sell eDaler\NDEASESS.xml
+		Contracts\Production\Sell eDaler\SWEDSESS.xml = Contracts\Production\Sell eDaler\SWEDSESS.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sell eDaler", "Sell eDaler", "{B5FB0237-14E0-4657-9A33-582F54F0699A}"
+	ProjectSection(SolutionItems) = preProject
+		Contracts\Sandbox\Sell eDaler\ELLFSESS.xml = Contracts\Sandbox\Sell eDaler\ELLFSESS.xml
+		Contracts\Sandbox\Sell eDaler\ESSESESS.xml = Contracts\Sandbox\Sell eDaler\ESSESESS.xml
+		Contracts\Sandbox\Sell eDaler\HANDSESS.xml = Contracts\Sandbox\Sell eDaler\HANDSESS.xml
+		Contracts\Sandbox\Sell eDaler\NDEASESS.xml = Contracts\Sandbox\Sell eDaler\NDEASESS.xml
+		Contracts\Sandbox\Sell eDaler\SWEDSESS.xml = Contracts\Sandbox\Sell eDaler\SWEDSESS.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Buy eDaler", "Buy eDaler", "{9915BE20-A67B-4FBA-8706-5FC7BDDFEA41}"
+	ProjectSection(SolutionItems) = preProject
+		Contracts\Sandbox\Buy eDaler\ELLFSESS.xml = Contracts\Sandbox\Buy eDaler\ELLFSESS.xml
+		Contracts\Sandbox\Buy eDaler\ESSESESS.xml = Contracts\Sandbox\Buy eDaler\ESSESESS.xml
+		Contracts\Sandbox\Buy eDaler\HANDSESS.xml = Contracts\Sandbox\Buy eDaler\HANDSESS.xml
+		Contracts\Sandbox\Buy eDaler\NDEASESS.xml = Contracts\Sandbox\Buy eDaler\NDEASESS.xml
+		Contracts\Sandbox\Buy eDaler\SWEDSESS.xml = Contracts\Sandbox\Buy eDaler\SWEDSESS.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Doc", "Doc", "{A0BB9C53-CDEF-4F69-B3BD-27F4B24F7535}"
+	ProjectSection(SolutionItems) = preProject
+		Doc\OBP_General_Private.pdf = Doc\OBP_General_Private.pdf
+		Doc\OpenPayments_AIS_Request_Headers.pdf = Doc\OpenPayments_AIS_Request_Headers.pdf
+		Doc\OpenPayments_Decoupled_SCA_flow_charts.pdf = Doc\OpenPayments_Decoupled_SCA_flow_charts.pdf
+		Doc\OpenPayments_Payment_Status.pdf = Doc\OpenPayments_Payment_Status.pdf
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6C101798-32BB-4BC9-89AC-05B1FDE93010}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C101798-32BB-4BC9-89AC-05B1FDE93010}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C101798-32BB-4BC9-89AC-05B1FDE93010}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C101798-32BB-4BC9-89AC-05B1FDE93010}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CD18C92-737A-43C3-B36F-9771D5121590}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CD18C92-737A-43C3-B36F-9771D5121590}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CD18C92-737A-43C3-B36F-9771D5121590}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CD18C92-737A-43C3-B36F-9771D5121590}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBA3B037-3FDD-4944-B96C-39768449BB8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBA3B037-3FDD-4944-B96C-39768449BB8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBA3B037-3FDD-4944-B96C-39768449BB8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBA3B037-3FDD-4944-B96C-39768449BB8E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8C453D4B-47BF-4EF8-96C7-2C969DB07785} = {2363390A-CAAB-4F28-8A63-64278802CA47}
+		{1E1D3B3D-46A8-4397-AE3E-FB1371073A7D} = {2363390A-CAAB-4F28-8A63-64278802CA47}
+		{149B20D0-8010-496B-9900-08C5CB3F5A2D} = {1E1D3B3D-46A8-4397-AE3E-FB1371073A7D}
+		{8A2185F3-D84B-4481-8E77-916537F3D8CF} = {1E1D3B3D-46A8-4397-AE3E-FB1371073A7D}
+		{B5FB0237-14E0-4657-9A33-582F54F0699A} = {8C453D4B-47BF-4EF8-96C7-2C969DB07785}
+		{9915BE20-A67B-4FBA-8706-5FC7BDDFEA41} = {8C453D4B-47BF-4EF8-96C7-2C969DB07785}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {288F2D73-F0CD-4584-92B2-D342C568D2ED}
+	EndGlobalSection
+EndGlobal
