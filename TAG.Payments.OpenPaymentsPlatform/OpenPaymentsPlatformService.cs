@@ -5,6 +5,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
+using Waher.Content;
+using Waher.Content.Html.Elements;
 using Waher.Content.Markdown;
 using Waher.Events;
 using Waher.IoTGateway;
@@ -138,15 +140,18 @@ namespace TAG.Payments.OpenPaymentsPlatform
 		private readonly string buyTemplateId;
 		private readonly string sellTemplateId;
 		private readonly string id;
+		private string sessionId; 
+		private bool requestFromMobilePhone;
+        private string tabId;
 
-		/// <summary>
-		/// Open Payments Platform service
-		/// </summary>
-		/// <param name="Country">Country where service operates</param>
-		/// <param name="Service">Service reference</param>
-		/// <param name="Mode">Operation mode</param>
-		/// <param name="Provider">Service provider.</param>
-		public OpenPaymentsPlatformService(CaseInsensitiveString Country, AspServiceProvider Service, OperationMode Mode,
+        /// <summary>
+        /// Open Payments Platform service
+        /// </summary>
+        /// <param name="Country">Country where service operates</param>
+        /// <param name="Service">Service reference</param>
+        /// <param name="Mode">Operation mode</param>
+        /// <param name="Provider">Service provider.</param>
+        public OpenPaymentsPlatformService(CaseInsensitiveString Country, AspServiceProvider Service, OperationMode Mode,
 			OpenPaymentsPlatformServiceProvider Provider)
 		{
 			this.country = Country;
@@ -652,20 +657,45 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
 			return null;
 		}
+        /// <summary>
+        /// Gets available payment options for buying eDaler.
+        /// </summary>
+        /// <param name="IdentityProperties">Properties engraved into the legal identity that will performm the request.</param>
+        /// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+        /// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+        /// <param name="CancelUrl">Optional Cancel URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+        /// <param name="ClientUrlCallback">Method to call if the payment service
+        /// requests an URL to be displayed on the client.</param>
+		/// <param name="SessionId">Session ID</param>
+		/// <param name="TabId">Tab ID</param>
+		/// <param name="RequestFromMobilePhone">If request originates from mobile phone. (true)
+		/// or web/desktop/other (false).</param>
+        /// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
+        /// contract to sign.</returns>
 
-		/// <summary>
-		/// Gets available payment options for buying eDaler.
-		/// </summary>
-		/// <param name="IdentityProperties">Properties engraved into the legal identity that will performm the request.</param>
-		/// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-		/// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-		/// <param name="CancelUrl">Optional Cancel URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-		/// <param name="ClientUrlCallback">Method to call if the payment service
-		/// requests an URL to be displayed on the client.</param>
-		/// <param name="State">State object to pass on the callback method.</param>
-		/// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
-		/// contract to sign.</returns>
-		public async Task<IDictionary<CaseInsensitiveString, object>[]> GetPaymentOptionsForBuyingEDaler(
+
+        public Task<IDictionary<CaseInsensitiveString, object>[]> GetAccountInfo(
+            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties, string SuccessUrl, string FailureUrl, string CancelUrl, string SessionId, string TabId, bool RequestFromMobilePhone)
+        {
+			this.tabId = TabId;
+			this.sessionId = SessionId;
+			this.requestFromMobilePhone = RequestFromMobilePhone;
+			return GetPaymentOptionsForBuyingEDaler(IdentityProperties, SuccessUrl, FailureUrl, CancelUrl, null, null);
+        }
+
+        /// <summary>
+        /// Gets available payment options for buying eDaler.
+        /// </summary>
+        /// <param name="IdentityProperties">Properties engraved into the legal identity that will performm the request.</param>
+        /// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+        /// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+        /// <param name="CancelUrl">Optional Cancel URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+        /// <param name="ClientUrlCallback">Method to call if the payment service
+        /// requests an URL to be displayed on the client.</param>
+        /// <param name="State">State object to pass on the callback method.</param>
+        /// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
+        /// contract to sign.</returns>
+        public async Task<IDictionary<CaseInsensitiveString, object>[]> GetPaymentOptionsForBuyingEDaler(
 			IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
 			string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
 		{
@@ -682,13 +712,18 @@ namespace TAG.Payments.OpenPaymentsPlatform
 			if (!(IdentityProperties.TryGetValue("PNR", out CaseInsensitiveString PersonalNumber)))
 				return new IDictionary<CaseInsensitiveString, object>[0];
 
-			OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
+			Log.Informational("Account" + Account + "PersonalNumber" + PersonalNumber);
+
+
+            OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
 				ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
 
 			if (Client is null)
 				return new IDictionary<CaseInsensitiveString, object>[0];
 
-			try
+
+            Log.Informational("Client created ");
+            try
 			{
 				string PersonalID = GetPersonalID(PersonalNumber);
 
@@ -709,15 +744,22 @@ namespace TAG.Payments.OpenPaymentsPlatform
 				ConsentStatus Consent = await Client.CreateConsent(string.Empty, true, false, false,
 					DateTime.Today.AddDays(1), 1, false, Operation);
 
-				if (Consent.Status != ConsentStatusValue.received)
+                Log.Informational("Consent created ");
+                if (Consent.Status != ConsentStatusValue.received)
 					return new IDictionary<CaseInsensitiveString, object>[0];
 
 				AuthorizationInformation Status = await Client.StartConsentAuthorization(Consent.ConsentID, Operation);
 
-				AuthenticationMethod Method = Status.GetAuthenticationMethod("mbid_same_device")
-					?? Status.GetAuthenticationMethod("mbid");
+                AuthenticationMethod Method = Status.GetAuthenticationMethod("mbid_same_device")
+                   ?? Status.GetAuthenticationMethod("mbid");
 
-				if (Method is null)
+                if (!string.IsNullOrEmpty(this.tabId))
+				  Method = this.requestFromMobilePhone ? Status.GetAuthenticationMethod("mbid_same_device")
+					: Status.GetAuthenticationMethod("mbid");
+
+                Log.Informational("Method" + Method.Name + "TabID" + this.tabId + "requestFromMobilePhone" + this.requestFromMobilePhone);
+
+                if (Method is null)
 					return new IDictionary<CaseInsensitiveString, object>[0];
 
 				PaymentServiceUserDataResponse PsuDataResponse = await Client.PutConsentUserData(Consent.ConsentID,
@@ -726,11 +768,47 @@ namespace TAG.Payments.OpenPaymentsPlatform
 				if (PsuDataResponse is null)
 					return new IDictionary<CaseInsensitiveString, object>[0];
 
-				if (!(ClientUrlCallback is null))
+                if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(this.tabId)))
+                    {
+                        Log.Informational("BankIdURL" + PsuDataResponse.ChallengeData.BankIdURL);
+
+                        Log.Informational("ImageUrl" + PsuDataResponse.ChallengeData.ImageUrl);
+
+                        await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowQRCode",
+                        JSON.Encode(new Dictionary<string, object>()
+                        {
+                                { "url", PsuDataResponse.ChallengeData.BankIdURL },
+                                { "urlIsImage",false },
+                                { "fromMobileDevice", this.requestFromMobilePhone },
+                                { "title", "Authorize recipient" },
+                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
+                        }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+                    }
+
+
+
+                    if (!(ClientUrlCallback is null))
 				{
 					if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL))
 					{
-						await ClientUrlCallback(this, new ClientUrlEventArgs(
+                        if (string.IsNullOrEmpty(this.tabId))
+						{
+							Log.Informational("BankIdURL" + PsuDataResponse.ChallengeData.BankIdURL);
+
+                            Log.Informational("ImageUrl" + PsuDataResponse.ChallengeData.ImageUrl);
+
+                            await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowQRCode",
+							JSON.Encode(new Dictionary<string, object>()
+							{
+								{ "url", PsuDataResponse.ChallengeData.BankIdURL },
+								{ "urlIsImage",false },
+								{ "fromMobileDevice", this.requestFromMobilePhone },
+								{ "title", "Authorize recipient" },
+								{ "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
+							}, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+						}
+
+                                await ClientUrlCallback(this, new ClientUrlEventArgs(
 							PsuDataResponse.ChallengeData.BankIdURL, State));
 					}
 					else if (!string.IsNullOrEmpty(PsuDataResponse.Links.ScaOAuth))
@@ -796,6 +874,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
 				foreach (AccountInformation Account2 in Accounts)
 				{
+					Log.Informational(Account2.Iban + "" + Account2.Name);
 					Result.Add(new Dictionary<CaseInsensitiveString, object>()
 					{
 						{ "Account", Account2.Iban },

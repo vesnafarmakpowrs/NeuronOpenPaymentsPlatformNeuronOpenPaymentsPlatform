@@ -12,6 +12,7 @@ using Waher.Networking.HTTP;
 using Waher.Networking.Sniffers;
 using Waher.Persistence;
 using Waher.Runtime.Inventory;
+using Waher.Runtime.Threading;
 
 namespace TAG.Payments.OpenPaymentsPlatform
 {
@@ -61,16 +62,52 @@ namespace TAG.Payments.OpenPaymentsPlatform
 		/// </summary>
 		internal const string RequiredPrivilege = "Admin.Payments.Paiwise.OpenPaymentsPlatform";
 
-		/// <summary>
-		/// Open Payments Platform service provider
-		/// </summary>
-		public OpenPaymentsPlatformServiceProvider()
+        private readonly Dictionary<string, string> functionNameByTabId = new Dictionary<string, string>();
+        private readonly string sessionId;
+       // private readonly BankIdSessionInformation sessionInformation;
+        /// <summary>
+        /// Open Payments Platform service provider
+        /// </summary>
+        public OpenPaymentsPlatformServiceProvider()
 		{
 		}
 
-		#region IModule
+        /// <summary>
+        /// Pushes status changes to the session to the web client having a given Tab ID.
+        /// </summary>
+        /// <param name="TabId">Tab ID</param>
+        /// <param name="FunctionName">Name of function to receive status updates.</param>
+        /// <param name="RequestFromMobilePhone">If request originates from mobile phone. (true)
+        /// or web/desktop/other (false).</param>
+        /// <param name="QrCodeUsed">If a QR Code was used to start session.</param>
+        /// <returns>If push-notification registration was added or updated.</returns>
+        public async Task<bool> PushStatusChanges(string TabId, string FunctionName, bool RequestFromMobilePhone, bool QrCodeUsed)
+        {
+           // await this.synchObj.BeginWrite();
+            try
+            {
+                bool Update = !this.functionNameByTabId.TryGetValue(TabId, out string OldFunction) || OldFunction != FunctionName;
 
-		private readonly static SignPayments signPayments = new SignPayments();
+                if (Update)
+                    this.functionNameByTabId[TabId] = FunctionName;
+
+                //if (!this.monitoringRunning)
+                //{
+                //    this.monitoringRunning = true;
+                //    Task _ = Task.Run(() => this.MonitorStatus(RequestFromMobilePhone, QrCodeUsed));
+                //}
+
+                return Update;
+            }
+            finally
+            {
+                //await this.synchObj.EndWrite();
+            }
+        }
+
+        #region IModule
+
+        private readonly static SignPayments signPayments = new SignPayments();
 		private readonly static ReturnPayments returnPayments = new ReturnPayments();
 		private readonly static RetryPayments retryPayments = new RetryPayments();
 
