@@ -684,6 +684,28 @@ namespace TAG.Payments.OpenPaymentsPlatform
         }
 
         /// <summary>
+        /// Gets an URL that can be used to start the BankID app on a desptop.
+        /// </summary>
+        /// <param name="RedirectUrl">URL to redirect to.</param>
+        /// <returns>URL for starting a BankID app on a desktop.</returns>
+        public string GetMobileAppUrl(string RedirectUrl, string AutoStartToken)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("bankid://?autostarttoken="); 
+            sb.Append(System.Web.HttpUtility.UrlEncode(AutoStartToken));
+            sb.Append("&redirect=");
+
+            if (!string.IsNullOrEmpty(RedirectUrl))
+                sb.Append(System.Web.HttpUtility.UrlEncode(RedirectUrl));
+            else
+                sb.Append("null");
+
+            return sb.ToString();
+        }
+
+
+        /// <summary>
         /// Gets available payment options for buying eDaler.
         /// </summary>
         /// <param name="IdentityProperties">Properties engraved into the legal identity that will performm the request.</param>
@@ -754,9 +776,18 @@ namespace TAG.Payments.OpenPaymentsPlatform
                    ?? Status.GetAuthenticationMethod("mbid");
 
                 if (!string.IsNullOrEmpty(this.tabId))
-				  Method = this.requestFromMobilePhone ? Status.GetAuthenticationMethod("mbid_same_device")
-					: Status.GetAuthenticationMethod("mbid");
-
+                    if (this.requestFromMobilePhone)
+                    {
+						Method = Status.GetAuthenticationMethod("mbid_same_device")
+							?? Status.GetAuthenticationMethod("mbid");
+                    }
+                    else
+                    {
+                        Method = Status.GetAuthenticationMethod("mbid_animated_qr_image")
+                            ?? Status.GetAuthenticationMethod("mbid")
+                            ?? Status.GetAuthenticationMethod("mbid_same_device");
+                    }
+             
                 Log.Informational("Method" + Method.Name + "TabID" + this.tabId + "requestFromMobilePhone" + this.requestFromMobilePhone);
 
                 if (Method is null)
@@ -771,13 +802,15 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(this.tabId)))
                     {
                         Log.Informational("BankIdURL" + PsuDataResponse.ChallengeData.BankIdURL);
-
-                        Log.Informational("ImageUrl" + PsuDataResponse.ChallengeData.ImageUrl);
+					    Log.Informational(GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken));
+					    string URL = this.requestFromMobilePhone ? GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken) : PsuDataResponse.ChallengeData.BankIdURL;
+	  
+                        Log.Informational("ImageUrl" + URL);
 
                         await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowQRCode",
                         JSON.Encode(new Dictionary<string, object>()
                         {
-                                { "url", PsuDataResponse.ChallengeData.BankIdURL },
+                                { "url", URL},
                                 { "urlIsImage",false },
                                 { "fromMobileDevice", this.requestFromMobilePhone },
                                 { "title", "Authorize recipient" },
