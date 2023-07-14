@@ -553,7 +553,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
             if (!Configuration.IsWellDefined)
+            {
+                await DisplayUserMessage(TabId, "Service not configured properly.");
                 return new PaymentResult("Service not configured properly.");
+            }
+
 
             AuthorizationFlow Flow = Configuration.AuthorizationFlow;
 
@@ -575,21 +579,27 @@ namespace TAG.Payments.OpenPaymentsPlatform
             if (!string.IsNullOrEmpty(Message))
             {
                 Log.Informational(Message);
+                await DisplayUserMessage(TabId, Message);
                 return new PaymentResult(Message);
             }
 
 
             Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
+            {
+                Log.Informational(Message);
+                await DisplayUserMessage(TabId, Message);
                 return new PaymentResult(Message);
-            Log.Informational(Message);
+            }
 
             Log.Informational("CreateClient started");
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
                 ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
 
             if (Client is null)
+            {
                 return new PaymentResult("Service not configured properly.");
+            }
             Log.Informational("CreateClient completed");
             try
             {
@@ -630,7 +640,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 AuthenticationMethod AuthenticationMethod = null;
 
                 Log.Informational("TabID: " + TabId ?? "-" + "requestFromMobilePhone: " + requestFromMobilePhone);
-                
+
                 if (!string.IsNullOrEmpty(TabId))
                 {
                     if (requestFromMobilePhone)
@@ -658,18 +668,16 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(TabId)))
                 {
                     Log.Informational("BankIdURL: " + PsuDataResponse.ChallengeData.BankIdURL);
-
                     Log.Informational("AutoStartToken: " + PsuDataResponse.ChallengeData.AutoStartToken);
-                    Log.Informational(GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken));
-                    string URL = this.requestFromMobilePhone ? GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken) : PsuDataResponse.ChallengeData.AutoStartToken;
+                    Log.Informational("MobileAppUrl: " + GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken));
 
-                    Log.Informational("Url :" + URL);
                     string AutoStartToken = PsuDataResponse.ChallengeData.AutoStartToken;
 
                     await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowQRCode",
                     JSON.Encode(new Dictionary<string, object>()
                     {
-                                { "url", URL},
+                                { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
+                                { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
                                 { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
                                 { "urlIsImage",true },
                                 { "fromMobileDevice", this.requestFromMobilePhone },
@@ -733,7 +741,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 }
 
                 if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
+                {
+                    await DisplayUserMessage(TabId, ErrorMessages[0].Text);
                     return new PaymentResult(ErrorMessages[0].Text);
+                }
+
 
                 PaymentTransactionStatus Status = await Client.GetPaymentInitiationStatus(Product, PaymentInitiationReference.PaymentId, Operation);
                 Log.Informational("PaymentTransactionStatus: " + Status);
@@ -749,16 +761,22 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     string s = Msg.ToString().Trim();
 
                     if (!string.IsNullOrEmpty(s))
+                    {
+                        await DisplayUserMessage(TabId, s);
                         return new PaymentResult(s);
+                    }
+
                 }
 
                 Log.Informational("Status.Status: " + Status.Status);
                 switch (Status.Status)
                 {
                     case PaymentStatus.RJCT:
+                        await DisplayUserMessage(TabId, "Payment was rejected.");
                         return new PaymentResult("Payment was rejected.");
 
                     case PaymentStatus.CANC:
+                        await DisplayUserMessage(TabId, "Payment was cancelled.");
                         return new PaymentResult("Payment was cancelled.");
                 }
 
@@ -769,16 +787,20 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         break;
 
                     case AuthorizationStatusValue.failed:
+                        await DisplayUserMessage(TabId, "Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
                         return new PaymentResult("Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
 
                     default:
+                        await DisplayUserMessage(TabId, "Transaction took too long to complete.");
                         return new PaymentResult("Transaction took too long to complete.");
                 }
 
+                await DisplayUserMessage(TabId, $"Sucessfully payed {Amount}{Currency}", true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
             {
+                await DisplayUserMessage(TabId, ex.Message);
                 return new PaymentResult(ex.Message);
             }
             finally
@@ -787,7 +809,15 @@ namespace TAG.Payments.OpenPaymentsPlatform
             }
         }
 
-
+        private async Task DisplayUserMessage(string tabId, string message, bool isSuccess = false)
+        {
+            await ClientEvents.PushEvent(new string[] { tabId }, "DisplayTransactionResult",
+                    JSON.Encode(new Dictionary<string, object>()
+                    {
+                        { "ok", isSuccess },
+                        { "message", message },
+                    }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+        }
 
         private static string CheckJidHostedByServer(IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             out CaseInsensitiveString Account)
