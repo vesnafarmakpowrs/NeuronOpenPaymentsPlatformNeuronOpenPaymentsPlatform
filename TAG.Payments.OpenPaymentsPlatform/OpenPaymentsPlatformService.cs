@@ -651,6 +651,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     else
                     {
                         AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_token")
+                            ?? AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_image") 
                             ?? AuthorizationStatus.GetAuthenticationMethod("mbid")
                             ?? AuthorizationStatus.GetAuthenticationMethod("mbid_same_device");
                     }
@@ -811,6 +812,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private async Task DisplayUserMessage(string tabId, string message, bool isSuccess = false)
         {
+            Log.Informational("DisplayUserMessage  " + message);
             await ClientEvents.PushEvent(new string[] { tabId }, "DisplayTransactionResult",
                     JSON.Encode(new Dictionary<string, object>()
                     {
