@@ -143,10 +143,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
         private readonly string buyTemplateId;
         private readonly string sellTemplateId;
         private readonly string id;
-        private string sessionId;
-        private bool requestFromMobilePhone;
-        private string tabId;
-        private IPAddress clientIpAddress;
+        //private string sessionId;
+        //private bool requestFromMobilePhone;
+        //private string tabId;
+        //private IPAddress clientIpAddress;
 
         /// <summary>
         /// Open Payments Platform service
@@ -543,12 +543,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string SessionId, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
         {
-            this.tabId = TabId;
-            this.sessionId = SessionId;
-            this.requestFromMobilePhone = RequestFromMobilePhone;
+           
             IPAddress.TryParse(RemoteEndpoint, out IPAddress ClientIpAddress);
 
-            this.clientIpAddress = ClientIpAddress;
             Log.Informational("PaymentLinkBuyEDaler started");
 
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
@@ -639,11 +636,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 Log.Informational("GetAuthenticationMethod started");
                 AuthenticationMethod AuthenticationMethod = null;
 
-                Log.Informational("TabID: " + TabId ?? "-" + "requestFromMobilePhone: " + requestFromMobilePhone);
+                Log.Informational("TabID: " + TabId ?? "-" + "requestFromMobilePhone: " + RequestFromMobilePhone);
 
                 if (!string.IsNullOrEmpty(TabId))
                 {
-                    if (requestFromMobilePhone)
+                    if (RequestFromMobilePhone)
                     {
                         AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_same_device")
                             ?? AuthorizationStatus.GetAuthenticationMethod("mbid");
@@ -657,7 +654,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     }
                 }
                 Log.Informational("GetAuthenticationMethod completed");
-                Log.Informational("Method" + AuthenticationMethod.Name.ToString() + "TabID" + this.tabId + "requestFromMobilePhone" + this.requestFromMobilePhone);
+                Log.Informational("Method" + AuthenticationMethod.Name.ToString() + "TabID" + TabId + "requestFromMobilePhone" + RequestFromMobilePhone);
 
                 Log.Informational("PutPaymentInitiationUserData started");
                 PaymentServiceUserDataResponse PsuDataResponse = await Client.PutPaymentInitiationUserData(
@@ -674,14 +671,14 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                     string AutoStartToken = PsuDataResponse.ChallengeData.AutoStartToken;
 
-                    await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowQRCode",
+                    await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                     JSON.Encode(new Dictionary<string, object>()
                     {
                                 { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
                                 { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
                                 { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
                                 { "urlIsImage",true },
-                                { "fromMobileDevice", this.requestFromMobilePhone },
+                                { "fromMobileDevice", RequestFromMobilePhone },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
                     }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
@@ -973,20 +970,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
         /// contract to sign.</returns>
 
-
-        public Task<IDictionary<CaseInsensitiveString, object>[]> GetAccountInfo(
-            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties, string SuccessUrl, string FailureUrl, string CancelUrl, string SessionId, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
-        {
-            this.tabId = TabId;
-            this.sessionId = SessionId;
-            this.requestFromMobilePhone = RequestFromMobilePhone;
-            IPAddress.TryParse(RemoteEndpoint, out IPAddress ClientIpAddress);
-
-            this.clientIpAddress = ClientIpAddress;
-
-            return GetPaymentOptionsForBuyingEDaler(IdentityProperties, SuccessUrl, FailureUrl, CancelUrl, null, null);
-        }
-
         /// <summary>
         /// Gets an URL that can be used to start the BankID app on a desptop.
         /// </summary>
@@ -1023,8 +1006,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// contract to sign.</returns>
         public async Task<IDictionary<CaseInsensitiveString, object>[]> GetPaymentOptionsForBuyingEDaler(
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
+            string SuccessUrl, string FailureUrl, string CancelUrl, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
         {
+              
+            IPAddress.TryParse(RemoteEndpoint, out IPAddress ClientIpAddress);
+
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
             if (!Configuration.IsWellDefined)
                 return new IDictionary<CaseInsensitiveString, object>[0];
@@ -1054,7 +1040,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 string PersonalID = GetPersonalID(PersonalNumber);
 
                 OperationInformation Operation = new OperationInformation(
-                    this.clientIpAddress,
+                    ClientIpAddress,
                     typeof(OpenPaymentsPlatformServiceProvider).Assembly.FullName,
                     Flow,
                     PersonalID,
@@ -1071,8 +1057,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 AuthenticationMethod Method = null;
 
 
-                if (!string.IsNullOrEmpty(this.tabId))
-                    if (this.requestFromMobilePhone)
+                if (!string.IsNullOrEmpty(TabId))
+                    if (RequestFromMobilePhone)
                     {
                         Method = Status.GetAuthenticationMethod("mbid_same_device")
                             ?? Status.GetAuthenticationMethod("mbid");
@@ -1088,7 +1074,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 Log.Informational("mbid: " + Status.GetAuthenticationMethod("mbid").Name);
 
                 Log.Informational("mbid_same_device" + Status.GetAuthenticationMethod("mbid_same_device").Name);
-                Log.Informational("Method" + Method.Name.ToString() + "TabID" + this.tabId + "requestFromMobilePhone" + this.requestFromMobilePhone);
+                Log.Informational("Method" + Method.Name.ToString() + "TabID" + TabId + "requestFromMobilePhone" + RequestFromMobilePhone);
 
                 if (Method is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
@@ -1099,27 +1085,28 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (PsuDataResponse is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
 
-                if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(this.tabId)))
+                if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(TabId)))
                 {
                     Log.Informational("BankIdURL: " + PsuDataResponse.ChallengeData.BankIdURL);
 
                     Log.Informational("AutoStartToken: " + PsuDataResponse.ChallengeData.AutoStartToken);
                     Log.Informational(GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken));
-                    string URL = this.requestFromMobilePhone ? GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken) : PsuDataResponse.ChallengeData.AutoStartToken;
+                    string URL = RequestFromMobilePhone ? GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken) : PsuDataResponse.ChallengeData.AutoStartToken;
 
                     Log.Informational("Url :" + URL);
                     string AutoStartToken = PsuDataResponse.ChallengeData.AutoStartToken;
 
-                    await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowQRCode",
-                    JSON.Encode(new Dictionary<string, object>()
-                    {
-                                { "url", URL},
+                    await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
+                   JSON.Encode(new Dictionary<string, object>()
+                   {
+                                { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
+                                { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
                                 { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
                                 { "urlIsImage",true },
-                                { "fromMobileDevice", this.requestFromMobilePhone },
+                                { "fromMobileDevice", RequestFromMobilePhone },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                    }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+                   }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
                 }
 
                 Log.Informational(PsuDataResponse.Status.ToString());
@@ -1158,8 +1145,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                                 PaymentAuthorizationStarted = true;
 
-                                ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
-                                await ClientUrlCallback(this, e);
+                                //ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
+                                //await ClientUrlCallback(this, e);
                             }
                             break;
 
@@ -1171,8 +1158,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             {
                                 CreditorAuthorizationStarted = true;
 
-                                ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
-                                await ClientUrlCallback(this, e);
+                                //ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
+                                //await ClientUrlCallback(this, e);
                             }
                             break;
                     }
@@ -1236,12 +1223,182 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 });
                 }
 
-                await ClientEvents.PushEvent(new string[] { this.tabId }, "ShowAccountInfo",
+                await ClientEvents.PushEvent(new string[] { TabId }, "ShowAccountInfo",
                        JSON.Encode(new Dictionary<string, object>()
                        {
                                 { "AccountInfo", Result.ToArray()},
                                 { "message", "Account information the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
                        }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+
+                return Result.ToArray();
+            }
+            finally
+            {
+                OpenPaymentsPlatformServiceProvider.Dispose(Client, this.mode);
+            }
+        }
+
+
+        /// <summary>
+		/// Gets available payment options for buying eDaler.
+		/// </summary>
+		/// <param name="IdentityProperties">Properties engraved into the legal identity that will performm the request.</param>
+		/// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+		/// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+		/// <param name="CancelUrl">Optional Cancel URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
+		/// <param name="ClientUrlCallback">Method to call if the payment service
+		/// requests an URL to be displayed on the client.</param>
+		/// <param name="State">State object to pass on the callback method.</param>
+		/// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
+		/// contract to sign.</returns>
+		public async Task<IDictionary<CaseInsensitiveString, object>[]> GetPaymentOptionsForBuyingEDaler(
+            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
+            string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
+        {
+            ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
+            if (!Configuration.IsWellDefined)
+                return new IDictionary<CaseInsensitiveString, object>[0];
+
+            AuthorizationFlow Flow = Configuration.AuthorizationFlow;
+
+            string Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
+            if (!string.IsNullOrEmpty(Message))
+                return new IDictionary<CaseInsensitiveString, object>[0];
+
+            if (!(IdentityProperties.TryGetValue("PNR", out CaseInsensitiveString PersonalNumber)))
+                return new IDictionary<CaseInsensitiveString, object>[0];
+
+            OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
+                ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
+
+            if (Client is null)
+                return new IDictionary<CaseInsensitiveString, object>[0];
+
+            try
+            {
+                string PersonalID = GetPersonalID(PersonalNumber);
+
+                KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
+                if (!(P.Value is null))
+                    return new IDictionary<CaseInsensitiveString, object>[0];
+
+                IPAddress ClientIpAddress = P.Key;
+
+                OperationInformation Operation = new OperationInformation(
+                    ClientIpAddress,
+                    typeof(OpenPaymentsPlatformServiceProvider).Assembly.FullName,
+                    Flow,
+                    PersonalID,
+                    null,
+                    this.service.BicFi);
+
+                ConsentStatus Consent = await Client.CreateConsent(string.Empty, true, false, false,
+                    DateTime.Today.AddDays(1), 1, false, Operation);
+
+                if (Consent.Status != ConsentStatusValue.received)
+                    return new IDictionary<CaseInsensitiveString, object>[0];
+
+                AuthorizationInformation Status = await Client.StartConsentAuthorization(Consent.ConsentID, Operation);
+
+                AuthenticationMethod Method = Status.GetAuthenticationMethod("mbid_same_device")
+                    ?? Status.GetAuthenticationMethod("mbid");
+
+                if (Method is null)
+                    return new IDictionary<CaseInsensitiveString, object>[0];
+
+                PaymentServiceUserDataResponse PsuDataResponse = await Client.PutConsentUserData(Consent.ConsentID,
+                    Status.AuthorizationID, Method.MethodId, Operation);
+
+                if (PsuDataResponse is null)
+                    return new IDictionary<CaseInsensitiveString, object>[0];
+
+                if (!(ClientUrlCallback is null))
+                {
+                    if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL))
+                    {
+                        await ClientUrlCallback(this, new ClientUrlEventArgs(
+                            PsuDataResponse.ChallengeData.BankIdURL, State));
+                    }
+                    else if (!string.IsNullOrEmpty(PsuDataResponse.Links.ScaOAuth))
+                    {
+                        string Url = Client.GetClientWebUrl(PsuDataResponse.Links.ScaOAuth,
+                            "https://lab.tagroot.io/ReturnFromPayment.md", SuccessUrl);
+
+                        await ClientUrlCallback(this, new ClientUrlEventArgs(Url, State));
+                    }
+                }
+
+                TppMessage[] ErrorMessages = PsuDataResponse.Messages;
+                AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
+                DateTime Start = DateTime.Now;
+                bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
+                        AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
+                bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
+
+                while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
+                    AuthorizationStatusValue != AuthorizationStatusValue.failed &&
+                    DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
+                {
+                    await Task.Delay(Configuration.PollingIntervalSeconds * 1000);
+
+                    AuthorizationStatus P2 = await Client.GetConsentAuthorizationStatus(Consent.ConsentID, Status.AuthorizationID, Operation);
+
+                    AuthorizationStatusValue = P2.Status;
+                    ErrorMessages = P2.Messages;
+
+                    if (!string.IsNullOrEmpty(P2.ChallengeData?.BankIdURL) && !(ClientUrlCallback is null))
+                    {
+                        switch (AuthorizationStatusValue)
+                        {
+                            case AuthorizationStatusValue.started:
+                            case AuthorizationStatusValue.authenticationStarted:
+                                if (!PaymentAuthorizationStarted)
+                                {
+                                    PaymentAuthorizationStarted = true;
+
+                                    ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
+                                    await ClientUrlCallback(this, e);
+                                }
+                                break;
+
+                            case AuthorizationStatusValue.authoriseCreditorAccountStarted:
+                                if (!CreditorAuthorizationStarted)
+                                {
+                                    CreditorAuthorizationStarted = true;
+
+                                    ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
+                                    await ClientUrlCallback(this, e);
+                                }
+                                break;
+                        }
+                    }
+                }
+
+                if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
+                    throw new Exception(ErrorMessages[0].Text);
+
+                AccountInformation[] Accounts = await Client.GetAccounts(Consent.ConsentID, Operation, true);
+                List<IDictionary<CaseInsensitiveString, object>> Result = new List<IDictionary<CaseInsensitiveString, object>>();
+
+                foreach (AccountInformation Account2 in Accounts)
+                {
+                    Result.Add(new Dictionary<CaseInsensitiveString, object>()
+                    {
+                        { "Account", Account2.Iban },
+                        { "ResourceId", Account2.ResourceID },
+                        { "Iban", Account2.Iban },
+                        { "Bban", Account2.Bban },
+                        { "Bic", Account2.Bic },
+                        { "Balance", Account2.Balance},
+                        { "Currency", Account2.Currency },
+                        { "CashAccountType", Account2.CashAccountType },
+                        { "Name", Account2.Name},
+                        { "OwnerName", Account2.OwnerName },
+                        { "Product", Account2.Product},
+                        { "Status", Account2.Status },
+                        { "Usage", Account2.Usage },
+                });
+                }
 
                 return Result.ToArray();
             }
