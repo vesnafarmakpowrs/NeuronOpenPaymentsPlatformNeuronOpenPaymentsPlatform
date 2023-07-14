@@ -793,7 +793,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         return new PaymentResult("Transaction took too long to complete.");
                 }
 
-                await DisplayUserMessage(TabId, $"Sucessfully payed {Amount}{Currency}", true);
+                await DisplayUserMessage(TabId, "Your payment is complete! Thank you for using Vaulter! \n A payment confirmation is now sent to your email address.", true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
