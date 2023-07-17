@@ -532,16 +532,14 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// contract authorizing the payment.</param>
         /// <param name="IdentityProperties">Properties engraved into the
         /// legal identity signing the payment request.</param>
-        /// <param name="Amount">Amount to be paid.</param>
-        /// <param name="Currency">Currency</param>
         /// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if payment has succeeded.</param>
-        /// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if payment has succeeded.</param>
-        /// requests an URL to be displayed on the client.</param>
-        /// <param name="State">State object to pass on the callback method.</param>
+        /// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if payment has failed.</param>
+        /// <param name="TabId">Tab ID</param>
+		/// <param name="RequestFromMobilePhone">If request originates from mobile phone. (true)
         /// <returns>Result of operation.</returns>
-        public async Task<PaymentResult> PaymentLinkBuyEDaler(IDictionary<CaseInsensitiveString, object> ContractParameters,
+        public async Task<PaymentResult> BuyEDaler(IDictionary<CaseInsensitiveString, object> ContractParameters,
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string SessionId, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
+            string SuccessUrl, string FailureUrl, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
         {
            
             IPAddress.TryParse(RemoteEndpoint, out IPAddress ClientIpAddress);
@@ -555,33 +553,20 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 return new PaymentResult("Service not configured properly.");
             }
 
-
             AuthorizationFlow Flow = Configuration.AuthorizationFlow;
-
-            if (string.IsNullOrEmpty(this.buyTemplateId) || Flow == AuthorizationFlow.Redirect)
-            {
-                ContractParameters["Amount"] = Amount;
-                ContractParameters["Currency"] = Currency;
-            }
 
             Log.Informational("ValidateParameters started");
 
+            string Currency = ContractParameters["Currency"].ToString();
+            decimal Amount = Expression.ToDecimal(ContractParameters["Amount"]);
+
             string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                Amount, Currency, out CaseInsensitiveString PersonalNumber,
+               Amount, Currency, out CaseInsensitiveString PersonalNumber,
                 out string BankAccount, out string TextMessage);
 
             Log.Informational("ValidateParameters completed");
 
             Log.Informational(Message);
-            if (!string.IsNullOrEmpty(Message))
-            {
-                Log.Informational(Message);
-                await DisplayUserMessage(TabId, Message);
-                return new PaymentResult(Message);
-            }
-
-
-            Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
             {
                 Log.Informational(Message);
