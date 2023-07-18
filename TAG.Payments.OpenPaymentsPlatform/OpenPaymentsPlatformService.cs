@@ -1195,7 +1195,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                        {
                                 { "AccountInfo", Result.ToArray()},
                                 { "message", "Account information the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                       }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+                       }, false), true);
 
                 return Result.ToArray();
             }
