@@ -660,7 +660,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 { "fromMobileDevice", RequestFromMobilePhone },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                    }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+                    }, false), true);
                 }
 
                 Log.Informational(PsuDataResponse.Status.ToString());
