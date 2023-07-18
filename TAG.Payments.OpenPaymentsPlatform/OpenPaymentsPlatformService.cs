@@ -648,7 +648,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 Log.Informational("PutPaymentInitiationUserData completed");
 
 
-                if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(TabId)))
+                if (!(PsuDataResponse.ChallengeData is null) && !string.IsNullOrEmpty(TabId))
                 {
                     await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                     JSON.Encode(new Dictionary<string, object>()
@@ -656,7 +656,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
                                 { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
                                 { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
-                                { "urlIsImage",true },
+                                { "ImageUrl",PsuDataResponse.ChallengeData.ImageUrl },
                                 { "fromMobileDevice", RequestFromMobilePhone },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
@@ -1061,7 +1061,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (PsuDataResponse is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
 
-                if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(TabId)))
+                if (!(PsuDataResponse.ChallengeData is null) && !string.IsNullOrEmpty(TabId))
                 {
                     await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                    JSON.Encode(new Dictionary<string, object>()
@@ -1069,7 +1069,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
                                 { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
                                 { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
-                                { "urlIsImage",true },
+                                { "ImageUrl",PsuDataResponse.ChallengeData.ImageUrl },
                                 { "fromMobileDevice", RequestFromMobilePhone },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
