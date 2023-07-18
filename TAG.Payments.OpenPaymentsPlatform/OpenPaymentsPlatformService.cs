@@ -650,12 +650,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(TabId)))
                 {
-                    Log.Informational("BankIdURL: " + PsuDataResponse.ChallengeData.BankIdURL);
-                    Log.Informational("AutoStartToken: " + PsuDataResponse.ChallengeData.AutoStartToken);
-                    Log.Informational("MobileAppUrl: " + GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken));
-
-                    string AutoStartToken = PsuDataResponse.ChallengeData.AutoStartToken;
-
                     await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                     JSON.Encode(new Dictionary<string, object>()
                     {
@@ -984,11 +978,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
         /// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
         /// <param name="CancelUrl">Optional Cancel URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-        /// <param name="ClientUrlCallback">Method to call if the payment service
-        /// requests an URL to be displayed on the client.</param>
-        /// <param name="State">State object to pass on the callback method.</param>
-        /// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
-        /// contract to sign.</returns>
+        /// <param name="TabId">Tab ID</param>
+        /// <param name="RequestFromMobilePhone">If request originates from mobile phone. (true)
+        /// <param name="RemoteEndpoint">Client IP adress
+        /// <returns>Result of operation.</returns>
         public async Task<IDictionary<CaseInsensitiveString, object>[]> GetPaymentOptionsForBuyingEDaler(
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             string SuccessUrl, string FailureUrl, string CancelUrl, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
@@ -1051,14 +1044,12 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     else
                     {
                         Method = Status.GetAuthenticationMethod("mbid_animated_qr_token")
-                            ?? Status.GetAuthenticationMethod("mbid")
-                            ?? Status.GetAuthenticationMethod("mbid_same_device");
+                              ?? Status.GetAuthenticationMethod("mbid_animated_qr_image")
+                              ?? Status.GetAuthenticationMethod("mbid")
+                              ?? Status.GetAuthenticationMethod("mbid_same_device");
+
+
                     }
-                Log.Informational("mbid_animated_qr_token: " + Status.GetAuthenticationMethod("mbid_animated_qr_token").Name);
-
-                Log.Informational("mbid: " + Status.GetAuthenticationMethod("mbid").Name);
-
-                Log.Informational("mbid_same_device" + Status.GetAuthenticationMethod("mbid_same_device").Name);
                 Log.Informational("Method" + Method.Name.ToString() + "TabID" + TabId + "requestFromMobilePhone" + RequestFromMobilePhone);
 
                 if (Method is null)
@@ -1072,15 +1063,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL) && (!string.IsNullOrEmpty(TabId)))
                 {
-                    Log.Informational("BankIdURL: " + PsuDataResponse.ChallengeData.BankIdURL);
-
-                    Log.Informational("AutoStartToken: " + PsuDataResponse.ChallengeData.AutoStartToken);
-                    Log.Informational(GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken));
-                    string URL = RequestFromMobilePhone ? GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken) : PsuDataResponse.ChallengeData.AutoStartToken;
-
-                    Log.Informational("Url :" + URL);
-                    string AutoStartToken = PsuDataResponse.ChallengeData.AutoStartToken;
-
                     await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                    JSON.Encode(new Dictionary<string, object>()
                    {
