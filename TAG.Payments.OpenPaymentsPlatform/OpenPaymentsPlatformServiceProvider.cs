@@ -260,7 +260,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 				{
 					OpenPaymentsPlatformClient Client = CreateClient(Configuration, Mode, Purpose);
 					if (Client is null)
-						return new OpenPaymentsPlatformService[0];
+						return new OpenPaymentsPlatformService[0]; 
 
 					try
 					{
