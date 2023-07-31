@@ -464,7 +464,7 @@ namespace TAG.Networking.OpenPaymentsPlatform
 				{ "scope", Scope },
 				{ "grant_type", "client_credentials" }
 			};
-            Log.Informational("Scope" + Scope);
+            //Log.Informational("Scope" + Scope);
             Dictionary<string, object> Response = await this.POST(this.authenticationHost, "connect/token", Form);
 
 			if (!Response.TryGetValue("access_token", out object Obj) || !(Obj is string Token))
@@ -478,14 +478,14 @@ namespace TAG.Networking.OpenPaymentsPlatform
 
 			if (TokenType != "Bearer")
 				throw new IOException("Unrecognized token type returned: " + TokenType);
-			Log.Informational("ExpiresInSeconds" + ExpiresInSeconds);
+			//Log.Informational("ExpiresInSeconds" + ExpiresInSeconds);
 
-			foreach(var t in Response)
-				Log.Informational($"{t.Key}:{t.Value}");
+			//foreach(var t in Response)
+			//	Log.Informational($"{t.Key}:{t.Value}");
 
 			lock (this.tokens)
 			{
-                Log.Informational("ExpiresInSeconds1" + ExpiresInSeconds);
+              //  Log.Informational("ExpiresInSeconds1" + ExpiresInSeconds);
                 this.tokens[Scope] = new Token(Token, DateTime.Now.AddSeconds(ExpiresInSeconds / 2));
 			}
 
