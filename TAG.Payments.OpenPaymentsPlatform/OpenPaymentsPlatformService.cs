@@ -1,7 +1,6 @@
 ﻿using Paiwise;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,11 +14,8 @@ using Waher.Persistence;
 using Waher.Persistence.Filters;
 using Waher.Persistence.Serialization;
 using Waher.Runtime.Inventory;
-using Waher.Runtime.Profiling.Export;
 using Waher.Runtime.Settings;
 using Waher.Script;
-using Waher.Security.CallStack;
-using Waher.Security.LoginMonitor;
 
 namespace TAG.Payments.OpenPaymentsPlatform
 {
@@ -48,11 +44,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private static readonly Dictionary<string, string> buyTemplateIdsSandbox = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2ba713cc-5c13-354c-8409-54d68d1e35ce@legal.lab.tagroot.io" },
-            { "ESSESESS", "2c5a5aa0-689f-e581-600d-7ebc6fed17de@legal.lab.neuron.vaulter.rs" },
-            { "HANDSESS", "2ba713e2-5c13-3550-8409-54d68d7545d2@legal.lab.tagroot.io" },
-            { "NDEASESS", "2ba713eb-5c13-3552-8409-54d68dc6093d@legal.lab.tagroot.io" },
-            { "SWEDSESS", "2c5a2e9a-2774-8092-4021-e8c780aae0f4@legal.lab.neuron.vaulter.rs" },
+            { "ELLFSESS", "2c5e1893-282a-7efb-6003-c66250efdee9@legal.lab.neuron.vaulter.rs" },
+            { "ESSESESS", "2c5e1871-282a-7ede-6003-c66250ca38c8@legal.lab.neuron.vaulter.rs" },
+            { "HANDSESS", "2c5e18a7-282a-7efe-6003-c6625058c7ba@legal.lab.neuron.vaulter.rs" },
+            { "NDEASESS", "2c5e18be-282a-7f03-6003-c6625038928c@legal.lab.neuron.vaulter.rs" },
+            { "SWEDSESS", "2c5e18ce-282a-7f07-6003-c66250c259cc@legal.lab.neuron.vaulter.rs" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },
@@ -143,10 +139,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
         private readonly string buyTemplateId;
         private readonly string sellTemplateId;
         private readonly string id;
-        //private string sessionId;
-        //private bool requestFromMobilePhone;
-        //private string tabId;
-        //private IPAddress clientIpAddress;
 
         /// <summary>
         /// Open Payments Platform service
@@ -351,7 +343,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
                 Amount, Currency, out CaseInsensitiveString PersonalNumber,
-                out string BankAccount, out string TextMessage, out object TabId, out bool RequestFromMobilePhone);
+                out string BankAccount, out string TextMessage, out string TabId, out bool RequestFromMobilePhone);
 
             if (!string.IsNullOrEmpty(Message))
                 return new PaymentResult(Message);
@@ -364,7 +356,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
 
             if (Client is null)
+            {
+                await DisplayUserMessage(TabId, "Service not configured properly.");
                 return new PaymentResult("Service not configured properly.");
+            }
 
             try
             {
@@ -391,11 +386,17 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 PaymentProduct Product;
 
                 if (Configuration.NeuronBankAccountIban.Substring(0, 2) == BankAccount.Substring(0, 2))
+                {
                     Product = PaymentProduct.domestic;
+                }
                 else if (Currency.ToUpper() == "EUR")
+                {
                     Product = PaymentProduct.sepa_credit_transfers;
+                }
                 else
+                {
                     Product = PaymentProduct.international;
+                }
 
                 PaymentInitiationReference PaymentInitiationReference = await Client.CreatePaymentInitiation(
                     Product, Amount, Currency, BankAccount, Currency,
@@ -408,30 +409,33 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 AuthenticationMethod AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_same_device")
                     ?? AuthorizationStatus.GetAuthenticationMethod("mbid");
-               
-                    if (false)
-                    {
-                        AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_same_device")
-                            ?? AuthorizationStatus.GetAuthenticationMethod("mbid");
-                    }
-                    else
-                    {
-                        AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_token")
-                            ?? AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_image")
-                            ?? AuthorizationStatus.GetAuthenticationMethod("mbid")
-                            ?? AuthorizationStatus.GetAuthenticationMethod("mbid_same_device");
-                    }
+
+                if (RequestFromMobilePhone)
+                {
+                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_same_device")
+                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid");
+                }
+                else
+                {
+                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_token")
+                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_image")
+                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid")
+                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid_same_device");
+                }
 
                 Log.Informational("Method" + AuthenticationMethod.Name.ToString() + "TabID" + TabId + "requestFromMobilePhone" + RequestFromMobilePhone);
 
                 if (AuthenticationMethod is null)
+                {
+                    await DisplayUserMessage(TabId, "Unable to find a Mobile Bank ID authorization method for the operation.");
                     return new PaymentResult("Unable to find a Mobile Bank ID authorization method for the operation.");
+                }
 
                 PaymentServiceUserDataResponse PsuDataResponse = await Client.PutPaymentInitiationUserData(
                     Product, PaymentInitiationReference.PaymentId,
                     AuthorizationStatus.AuthorizationID, AuthenticationMethod.MethodId, Operation);
 
-                if (TabId != null)
+                if (!string.IsNullOrEmpty(TabId))
                 {
                     if (!(PsuDataResponse.ChallengeData is null) && !string.IsNullOrEmpty(TabId.ToString()))
                     {
@@ -468,6 +472,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
                 DateTime Start = DateTime.Now;
+
                 bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
                         AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
                 bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
@@ -489,7 +494,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         {
                             case AuthorizationStatusValue.started:
                             case AuthorizationStatusValue.authenticationStarted:
-                               
+
                                 if (!PaymentAuthorizationStarted)
                                 {
                                     PaymentAuthorizationStarted = true;
@@ -501,7 +506,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 break;
 
                             case AuthorizationStatusValue.authoriseCreditorAccountStarted:
-                               
+
                                 if (!CreditorAuthorizationStarted)
                                 {
                                     CreditorAuthorizationStarted = true;
@@ -516,7 +521,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 }
 
                 if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
+                {
                     return new PaymentResult(ErrorMessages[0].Text);
+                }
 
                 PaymentTransactionStatus Status = await Client.GetPaymentInitiationStatus(Product, PaymentInitiationReference.PaymentId, Operation);
 
@@ -527,20 +534,27 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     StringBuilder Msg = new StringBuilder();
 
                     foreach (TppMessage TppMsg in Status.Messages)
+                    {
                         Msg.AppendLine(TppMsg.Text);
+                    }
 
                     string s = Msg.ToString().Trim();
 
                     if (!string.IsNullOrEmpty(s))
+                    {
+                        await DisplayUserMessage(TabId, s);
                         return new PaymentResult(s);
+                    }
                 }
 
                 switch (Status.Status)
                 {
                     case PaymentStatus.RJCT:
+                        await DisplayUserMessage(TabId, "Payment was rejected.");
                         return new PaymentResult("Payment was rejected.");
 
                     case PaymentStatus.CANC:
+                        await DisplayUserMessage(TabId, "Payment was cancelled.");
                         return new PaymentResult("Payment was cancelled.");
                 }
 
@@ -550,16 +564,20 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         break;
 
                     case AuthorizationStatusValue.failed:
+                        await DisplayUserMessage(TabId, "Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
                         return new PaymentResult("Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
 
                     default:
+                        await DisplayUserMessage(TabId, "Transaction took too long to complete.");
                         return new PaymentResult("Transaction took too long to complete.");
                 }
 
+                await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
             {
+                await DisplayUserMessage(TabId, ex.Message);
                 return new PaymentResult(ex.Message);
             }
             finally
@@ -570,13 +588,18 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private async Task DisplayUserMessage(string tabId, string message, bool isSuccess = false)
         {
+            if (string.IsNullOrEmpty(tabId))
+            {
+                return;
+            }
+
             Log.Informational("DisplayUserMessage  " + message);
             await ClientEvents.PushEvent(new string[] { tabId }, "DisplayTransactionResult",
                     JSON.Encode(new Dictionary<string, object>()
                     {
                         { "ok", isSuccess },
                         { "message", message },
-                    }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+                    }, false), true);
         }
 
         private static string CheckJidHostedByServer(IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
@@ -654,25 +677,25 @@ namespace TAG.Payments.OpenPaymentsPlatform
         private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
-            out string BankAccount, out string TextMessage, out object TabId, out bool RequestFromMobilePhone)
+            out string BankAccount, out string TextMessage, out string TabId, out bool RequestFromMobilePhone)
         {
             PersonalNumber = null;
             TextMessage = string.Empty;
             BankAccount = string.Empty;
-            TabId =null;
+            TabId = null;
             RequestFromMobilePhone = false;
 
             if (!ContractParameters.TryGetValue("Amount", out object Obj))
                 return "Amount not available in contract.";
 
-            if (ContractParameters.TryGetValue("tabId", out object ObjTabId))
-                TabId = ObjTabId;
-            
+            if (ContractParameters.TryGetValue("tabId", out object ObjTabId) && ObjTabId is string tabId)
+                TabId = tabId;
+
             if (ContractParameters.TryGetValue("requestFromMobilePhone", out object ObjIsMobile))
                 RequestFromMobilePhone = Convert.ToBoolean(ObjIsMobile);
 
             Log.Informational("OPP TabId  " + TabId.ToString());
-    
+
             if (!(Obj is decimal ContractAmount))
             {
                 try
@@ -778,7 +801,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             string SuccessUrl, string FailureUrl, string CancelUrl, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
         {
-              
+
             IPAddress.TryParse(RemoteEndpoint, out IPAddress ClientIpAddress);
 
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
@@ -874,7 +897,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
                         AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
                 bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
-              
+
                 int counter = 0;
                 while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
                     AuthorizationStatusValue != AuthorizationStatusValue.failed &&

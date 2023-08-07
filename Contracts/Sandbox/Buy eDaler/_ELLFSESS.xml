@@ -1,0 +1,100 @@
+<contract archiveOpt="P2Y" archiveReq="P1Y" canActAsTemplate="true" duration="P1Y" id="BuyEDalerOppELLFSESSandbox" visibility="Public" xmlns="urn:ieee:iot:leg:sc:1.0">
+	<BuyEDaler serviceId="Sandbox.ELLFSESS" serviceProvider="TAG.Payments.OpenPaymentsPlatform.OpenPaymentsPlatformServiceProvider" xmlns="https://paiwise.tagroot.io/Schema/PaymentInstructions.xsd">
+		<Amount>
+			<ParameterReference parameter="amount" />
+		</Amount>
+		<Currency>
+			<ParameterReference parameter="currency" />
+		</Currency>
+	</BuyEDaler>
+	<role maxCount="1" minCount="1" name="Buyer">
+		<description xml:lang="en">
+			<paragraph>
+				<text>The part that sells eDaler from the </text>
+				<italic>
+					<text>Trust Provider</text>
+				</italic>
+				<text>.</text>
+			</paragraph>
+		</description>
+	</role>
+	<role maxCount="1" minCount="1" name="TrustProvider">
+		<description xml:lang="en">
+			<paragraph>
+				<text>The Trust Provider selling eDaler to the </text>
+				<italic>
+					<text>Seller</text>
+				</italic>
+				<text>.</text>
+			</paragraph>
+		</description>
+	</role>
+	<parts>
+		<templateOnly />
+	</parts>
+	<parameters>
+		<numericalParameter name="amount" exp="round(amount)=amount" min="0" minIncluded="false">
+			<description xml:lang="en">
+				<paragraph>
+					<text>The amount of eDaler to sell.</text>
+				</paragraph>
+			</description>
+		</numericalParameter>
+		<stringParameter name="currency">
+			<description xml:lang="en">
+				<paragraph>
+					<text>The currency of the eDaler to sell.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="account">
+			<description xml:lang="en">
+				<paragraph>
+					<text>ID of bank account of the </text>
+					<italic>
+						<text>seller</text>
+					</italic>
+					<text>.</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="tabId">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Tab Id</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="requestFromMobilePhone">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Is requested from mobile phone</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="message">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Message send to banks</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+	</parameters>
+	<humanReadableText xml:lang="en">
+		<paragraph>
+			<text>Simulated buying of eDaler® The Buyer hereby agrees to simulate buying eDaler® to the amount of 31 SEK from its bank account SE5460000000000403333911 (IBAN format) via Handelsbanken.</text>
+		</paragraph>
+		<paragraph>
+			<text>Transaction fees There are no transaction fees during the simulation, as no real transaction will take place.</text>
+		</paragraph>
+		<paragraph>
+			<text>Service Provider The Neuron® will use the Open Payments Platform sandbox to perform a simulated direct bank transfer of the requested amount to the Neuron® operator. As soon as the transaction has been performed, the wallet of the Buyer will receive the corresponding amount of eDaler®.</text>
+		</paragraph>
+		<paragraph>
+			<text>Simulation The Buyer agrees to handle the generated eDaler® for an approved test only, and ensures the generated eDaler® is properly destroyed after the test is completed. The user also ensures the generated eDaler® is not used for other purposes than the approved testing. The eDaler® can be properly destroyed either by scanning an eDaler® destruction URI, or by simulating the sale of the corresponding amount via a similar sandbox service.</text>
+		</paragraph>
+		<paragraph>
+			<text>Test approval All tests of generated eDaler® in this simulation must be pre-approved by the operator of the Neuron® or the Trust Provider hosting the Neuron®.</text>
+		</paragraph>
+	</humanReadableText>
+</contract>

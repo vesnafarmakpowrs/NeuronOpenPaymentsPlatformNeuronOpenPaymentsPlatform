@@ -51,7 +51,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Buy eDaler", "Buy eDaler", "{9915BE20-A67B-4FBA-8706-5FC7BDDFEA41}"
 	ProjectSection(SolutionItems) = preProject
 		Contracts\Sandbox\Buy eDaler\ELLFSESS.xml = Contracts\Sandbox\Buy eDaler\ELLFSESS.xml
-		Contracts\Sandbox\Buy eDaler\ESSESESS.xml = Contracts\Sandbox\Buy eDaler\ESSESESS.xml
 		Contracts\Sandbox\Buy eDaler\HANDSESS.xml = Contracts\Sandbox\Buy eDaler\HANDSESS.xml
 		Contracts\Sandbox\Buy eDaler\NDEASESS.xml = Contracts\Sandbox\Buy eDaler\NDEASESS.xml
 		Contracts\Sandbox\Buy eDaler\SWEDSESS.xml = Contracts\Sandbox\Buy eDaler\SWEDSESS.xml
