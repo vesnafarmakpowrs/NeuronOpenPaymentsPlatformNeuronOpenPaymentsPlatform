@@ -1251,11 +1251,15 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 out string BankAccount, out string AccountName, out string TextMessage);
 
             if (!string.IsNullOrEmpty(Message))
+            {
                 return new PaymentResult(Message);
+            }
 
             Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
+            {
                 return new PaymentResult(Message);
+            }
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode);
             if (Client is null)
@@ -1279,7 +1283,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     PersonalID,
                     OrganizationID,
                     Configuration.NeuronBankBic);
-
+                Log.Informational("OperationInformation f");
                 PaymentProduct Product;
 
                 if (Configuration.NeuronBankAccountIban.Substring(0, 2) == BankAccount.Substring(0, 2))
@@ -1316,7 +1320,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 };
 
                 await Database.Insert(PaymentRecord);
-
                 StringBuilder Markdown = new StringBuilder();
 
                 Markdown.Append("Outbound payment [available for approval](");
@@ -1406,7 +1409,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             AccountName = null;
             string TabId = null;
             string Msg = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency, out PersonalNumber,
-                out BankAccount, out TextMessage, out TabId);
+                out BankAccount, out TextMessage, out TabId, out bool fromMobile);
 
             if (!string.IsNullOrEmpty(Msg))
                 return Msg;
