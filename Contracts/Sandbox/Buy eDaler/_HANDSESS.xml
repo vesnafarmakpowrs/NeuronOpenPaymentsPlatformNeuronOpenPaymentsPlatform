@@ -79,6 +79,13 @@
 				</paragraph>
 			</description>
 		</stringParameter>
+		<stringParameter name="callBackUrl">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Send info when transaction is completed</text>
+				</paragraph>
+			</description>
+		</stringParameter>
 	</parameters>
 	<humanReadableText xml:lang="en">
 		<paragraph>

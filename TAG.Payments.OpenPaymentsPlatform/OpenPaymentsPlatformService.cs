@@ -16,6 +16,7 @@ using Waher.Persistence.Serialization;
 using Waher.Runtime.Inventory;
 using Waher.Runtime.Settings;
 using Waher.Script;
+using Waher.Security;
 
 namespace TAG.Payments.OpenPaymentsPlatform
 {
@@ -44,11 +45,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private static readonly Dictionary<string, string> buyTemplateIdsSandbox = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2c5e1893-282a-7efb-6003-c66250efdee9@legal.lab.neuron.vaulter.rs" },
-            { "ESSESESS", "2c5e1871-282a-7ede-6003-c66250ca38c8@legal.lab.neuron.vaulter.rs" },
-            { "HANDSESS", "2c5e18a7-282a-7efe-6003-c6625058c7ba@legal.lab.neuron.vaulter.rs" },
-            { "NDEASESS", "2c5e18be-282a-7f03-6003-c6625038928c@legal.lab.neuron.vaulter.rs" },
-            { "SWEDSESS", "2c5e18ce-282a-7f07-6003-c66250c259cc@legal.lab.neuron.vaulter.rs" },
+            { "ELLFSESS", "2c68cbf3-6675-1c88-940b-638d480c94dc@legal.lab.neuron.vaulter.rs" },
+            { "ESSESESS", "2c68cc04-6675-d5dc-940b-638d48f996e6@legal.lab.neuron.vaulter.rs" },
+            { "HANDSESS", "2c68cc19-6676-b2e2-940b-638d48dcc131@legal.lab.neuron.vaulter.rs" },
+            { "NDEASESS", "2c68cc2e-6677-a0c5-940b-638d486fe39d@legal.lab.neuron.vaulter.rs" },
+            { "SWEDSESS", "2c68cc3a-6678-2918-940b-638d487fc024@legal.lab.neuron.vaulter.rs" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },
@@ -343,7 +344,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
                 Amount, Currency, out CaseInsensitiveString PersonalNumber,
-                out string BankAccount, out string TextMessage, out string TabId, out bool RequestFromMobilePhone);
+                out string BankAccount, out string TextMessage, out string TabId, out string CallBackUrl, out bool RequestFromMobilePhone);
 
             if (!string.IsNullOrEmpty(Message))
                 return new PaymentResult(Message);
@@ -488,6 +489,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     AuthorizationStatusValue = P2.Status;
                     ErrorMessages = P2.Messages;
 
+                    Log.Informational("GetPaymentInitiationAuthorizationStatus");
+                    await DisplayUserMessage(TabId, "Transaction is in progress", true);
                     if (!string.IsNullOrEmpty(P2.ChallengeData?.BankIdURL) && !(ClientUrlCallback is null))
                     {
                         switch (AuthorizationStatusValue)
@@ -572,7 +575,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         return new PaymentResult("Transaction took too long to complete.");
                 }
 
-                await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
+                if (String.IsNullOrEmpty(CallBackUrl))
+                  await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
+               // await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
@@ -677,12 +682,13 @@ namespace TAG.Payments.OpenPaymentsPlatform
         private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
-            out string BankAccount, out string TextMessage, out string TabId, out bool RequestFromMobilePhone)
+            out string BankAccount, out string TextMessage, out string TabId, out string CallBackUrl, out bool RequestFromMobilePhone)
         {
             PersonalNumber = null;
             TextMessage = string.Empty;
             BankAccount = string.Empty;
             TabId = null;
+            CallBackUrl = string.Empty;
             RequestFromMobilePhone = false;
 
             if (!ContractParameters.TryGetValue("Amount", out object Obj))
@@ -690,6 +696,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             if (ContractParameters.TryGetValue("tabId", out object ObjTabId) && ObjTabId is string tabId)
                 TabId = tabId;
+
+            if (ContractParameters.TryGetValue("callBackURL", out object ObjcallBackURL) && ObjcallBackURL is string callBackURL)
+                CallBackUrl = callBackURL;
+            
 
             if (ContractParameters.TryGetValue("requestFromMobilePhone", out object ObjIsMobile))
                 RequestFromMobilePhone = Convert.ToBoolean(ObjIsMobile);
@@ -1408,8 +1418,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
         {
             AccountName = null;
             string TabId = null;
+            string CallBackUrl = null;
             string Msg = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency, out PersonalNumber,
-                out BankAccount, out TextMessage, out TabId, out bool fromMobile);
+                out BankAccount, out TextMessage, out TabId, out CallBackUrl, out bool fromMobile);
 
             if (!string.IsNullOrEmpty(Msg))
                 return Msg;
@@ -1443,5 +1454,29 @@ namespace TAG.Payments.OpenPaymentsPlatform
         }
 
         #endregion
+
+
+        private async Task<string> SendTransactionInfoToCallBackUrl(string CallBackUrl, string Status)
+        {
+            try
+            {
+                object Result = await InternetContent.PostAsync(
+                    new Uri(CallBackUrl),
+                    new Dictionary<string, object>()
+                    {
+                        { "status", Status }
+                    },
+                    new KeyValuePair<string, string>("Accept", "application/json"));
+
+                Log.Informational("SendTransactionInfoTo:" + CallBackUrl);
+            }
+            catch (System.Exception ex)
+            {
+                Log.Error(ex);
+            }
+
+            return null;
+        }
+
     }
 }

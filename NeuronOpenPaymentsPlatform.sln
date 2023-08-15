@@ -54,6 +54,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Buy eDaler", "Buy eDaler", 
 		Contracts\Sandbox\Buy eDaler\HANDSESS.xml = Contracts\Sandbox\Buy eDaler\HANDSESS.xml
 		Contracts\Sandbox\Buy eDaler\NDEASESS.xml = Contracts\Sandbox\Buy eDaler\NDEASESS.xml
 		Contracts\Sandbox\Buy eDaler\SWEDSESS.xml = Contracts\Sandbox\Buy eDaler\SWEDSESS.xml
+		Contracts\Sandbox\Buy eDaler\_ELLFSESS.xml = Contracts\Sandbox\Buy eDaler\_ELLFSESS.xml
+		Contracts\Sandbox\Buy eDaler\_ESSESESS.xml = Contracts\Sandbox\Buy eDaler\_ESSESESS.xml
+		Contracts\Sandbox\Buy eDaler\_HANDSESS.xml = Contracts\Sandbox\Buy eDaler\_HANDSESS.xml
+		Contracts\Sandbox\Buy eDaler\_NDEASESS.xml = Contracts\Sandbox\Buy eDaler\_NDEASESS.xml
+		Contracts\Sandbox\Buy eDaler\_SWEDSESS.xml = Contracts\Sandbox\Buy eDaler\_SWEDSESS.xml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Doc", "Doc", "{A0BB9C53-CDEF-4F69-B3BD-27F4B24F7535}"
