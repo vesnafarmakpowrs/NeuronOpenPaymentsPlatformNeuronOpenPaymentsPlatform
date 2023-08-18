@@ -576,8 +576,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 }
 
                 if (String.IsNullOrEmpty(CallBackUrl))
-                  await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
-               // await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
+                    await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
+                // await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
@@ -699,12 +699,14 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             if (ContractParameters.TryGetValue("callBackURL", out object ObjcallBackURL) && ObjcallBackURL is string callBackURL)
                 CallBackUrl = callBackURL;
-            
 
             if (ContractParameters.TryGetValue("requestFromMobilePhone", out object ObjIsMobile))
                 RequestFromMobilePhone = Convert.ToBoolean(ObjIsMobile);
 
-            Log.Informational("OPP TabId  " + TabId.ToString());
+            if (!string.IsNullOrEmpty(TabId))
+            {
+                Log.Informational("OPP TabId  " + TabId.ToString());
+            }
 
             if (!(Obj is decimal ContractAmount))
             {
@@ -1244,6 +1246,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
         {
+            Log.Informational("New VERSION SELLEDALER 2");
+
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
             if (!Configuration.IsWellDefined)
                 return new PaymentResult("Service not configured properly.");
@@ -1257,8 +1261,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
             }
 
             string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                Amount, Currency, out CaseInsensitiveString _,
-                out string BankAccount, out string AccountName, out string TextMessage);
+                  Amount, Currency, out CaseInsensitiveString _,
+                  out string BankAccount, out string AccountName, out string TextMessage);
 
             if (!string.IsNullOrEmpty(Message))
             {
@@ -1274,7 +1278,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode);
             if (Client is null)
                 return new PaymentResult("Service not configured properly.");
-
             try
             {
                 string PersonalID = GetPersonalID(Configuration.PersonalID);
@@ -1293,7 +1296,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     PersonalID,
                     OrganizationID,
                     Configuration.NeuronBankBic);
-                Log.Informational("OperationInformation f");
+
                 PaymentProduct Product;
 
                 if (Configuration.NeuronBankAccountIban.Substring(0, 2) == BankAccount.Substring(0, 2))
@@ -1302,6 +1305,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Product = PaymentProduct.sepa_credit_transfers;
                 else
                     Product = PaymentProduct.international;
+
 
                 PaymentInitiationReference PaymentInitiationReference = await Client.CreatePaymentInitiation(
                     Product, Amount, Currency, Configuration.NeuronBankAccountIban, Currency,
@@ -1416,6 +1420,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
             out string BankAccount, out string AccountName, out string TextMessage)
         {
+
             AccountName = null;
             string TabId = null;
             string CallBackUrl = null;
@@ -1429,8 +1434,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 return "Account Name not available in contract.";
 
             AccountName = Obj?.ToString() ?? string.Empty;
-
-            return null;
+            return string.Empty;
         }
 
         /// <summary>
