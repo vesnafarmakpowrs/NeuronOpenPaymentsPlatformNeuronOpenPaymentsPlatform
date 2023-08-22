@@ -365,10 +365,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
             try
             {
                 string PersonalID = GetPersonalID(PersonalNumber);
-                Log.Informational("1 OPP PersonalID: " + PersonalID);
                 if (mode == OperationMode.Sandbox)
                     PersonalID = "";
-                Log.Informational("OPP PersonalID: " + PersonalID);
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
                 if (!(P.Value is null))
@@ -423,8 +421,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         ?? AuthorizationStatus.GetAuthenticationMethod("mbid")
                         ?? AuthorizationStatus.GetAuthenticationMethod("mbid_same_device");
                 }
-
-                Log.Informational("Method" + AuthenticationMethod.Name.ToString() + "TabID" + TabId + "requestFromMobilePhone" + RequestFromMobilePhone);
 
                 if (AuthenticationMethod is null)
                 {
@@ -576,8 +572,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 }
 
                 if (String.IsNullOrEmpty(CallBackUrl))
+                {
                     await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
-                // await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
+                }
+                   
+                await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
