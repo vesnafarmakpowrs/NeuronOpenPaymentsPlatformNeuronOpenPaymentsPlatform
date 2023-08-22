@@ -27,11 +27,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
     {
         private static readonly Dictionary<string, string> buyTemplateIdsProduction = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2bebf3fe-151c-76cd-180b-8e272c027c0d@legal.paiwise.tagroot.io" },
-            { "ESSESESS", "2bebf416-151c-76d0-180b-8e272c8a8890@legal.paiwise.tagroot.io" },
-            { "HANDSESS", "2bebf426-151c-76d2-180b-8e272c4a5d69@legal.paiwise.tagroot.io" },
-            { "NDEASESS", "2bebf434-151c-76d6-180b-8e272cb1e584@legal.paiwise.tagroot.io" },
-            { "SWEDSESS", "2bebf441-151c-76d8-180b-8e272cf43b0a@legal.paiwise.tagroot.io" },
+            { "ELLFSESS", "2c7774bc-5b01-2ea3-4413-e95df8993592@legal.neuron.vaulter.se" },
+            { "ESSESESS", "2c777286-5b01-2e72-4413-e95df869a2ca@legal.neuron.vaulter.se" },
+            { "HANDSESS", "2c777461-5b01-2e9c-4413-e95df8262263@legal.neuron.vaulter.se" },
+            { "NDEASESS", "2c777366-5b01-2e8a-4413-e95df8946858@legal.neuron.vaulter.se" },
+            { "SWEDSESS", "2c7773ed-5b01-2e94-4413-e95df8049e80@legal.neuron.vaulter.se" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },

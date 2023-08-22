@@ -1,10 +1,10 @@
 <contract archiveOpt="P2Y" archiveReq="P1Y" canActAsTemplate="true" duration="P7D" id="BuyEDalerOppELLFSESSProduction" visibility="PublicSearchable" xmlns="urn:ieee:iot:leg:sc:1.0">
 	<BuyEDaler serviceId="Production.ELLFSESS" serviceProvider="TAG.Payments.OpenPaymentsPlatform.OpenPaymentsPlatformServiceProvider" xmlns="https://paiwise.tagroot.io/Schema/PaymentInstructions.xsd">
 		<Amount>
-			<ParameterReference parameter="Amount" />
+			<ParameterReference parameter="amount" />
 		</Amount>
 		<Currency>
-			<ParameterReference parameter="Currency" />
+			<ParameterReference parameter="currency" />
 		</Currency>
 	</BuyEDaler>
 	<role maxCount="1" minCount="1" name="Buyer">
@@ -38,7 +38,7 @@
 		<templateOnly />
 	</parts>
 	<parameters>
-		<numericalParameter name="Amount" min="0" minIncluded="false">
+		<numericalParameter name="amount" min="0" minIncluded="false">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Amount of </text>
@@ -50,14 +50,14 @@
 				</paragraph>
 			</description>
 		</numericalParameter>
-		<stringParameter name="Currency" value="" regEx="[A-Z]{3}">
+		<stringParameter name="currency" value="" regEx="[A-Z]{3}">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Currency of the transaction.</text>
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="Account" guide="IBAN" regEx="^(SE\s*\d{2}\s*\d{3}\s*\d{16}\s*\d)|(FI\s*\d{2}\s*\d{3}\s*\d{11})|(DE\s*\d{2}\s*\d{8}\s*\d{10})|(DK\s*\d{2}\s*\d{4}\s*\d{9}\s*\d)|(GB\s*\d{2}\s*[A-Z]{4}\s*\d{6}\s*\d{8})|(NO\s*\d{2}\s*\d{4}\s*\d{6}\s*\d)$">
+		<stringParameter name="account" guide="IBAN" regEx="^(SE\s*\d{2}\s*\d{3}\s*\d{16}\s*\d)|(FI\s*\d{2}\s*\d{3}\s*\d{11})|(DE\s*\d{2}\s*\d{8}\s*\d{10})|(DK\s*\d{2}\s*\d{4}\s*\d{9}\s*\d)|(GB\s*\d{2}\s*[A-Z]{4}\s*\d{6}\s*\d{8})|(NO\s*\d{2}\s*\d{4}\s*\d{6}\s*\d)$">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Bank account number (in IBAN format) used when buying </text>
@@ -69,10 +69,31 @@
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="Message" maxLength="10">
+		<stringParameter name="tabId">
 			<description xml:lang="en">
 				<paragraph>
-					<text>Text message to associate with bank transaction</text>
+					<text>Tab Id</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="requestFromMobilePhone">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Is requested from mobile phone</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="message">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Message send to banks</text>
+				</paragraph>
+			</description>
+		</stringParameter>
+		<stringParameter name="callBackUrl">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Send info when transaction is completed</text>
 				</paragraph>
 			</description>
 		</stringParameter>
@@ -94,13 +115,13 @@
 					</italic>
 					<text>® to the amount of </text>
 					<bold>
-						<parameter name="Amount" />
+						<parameter name="amount" />
 						<text> </text>
-						<parameter name="Currency" />
+						<parameter name="currency" />
 					</bold>
 					<text> from its bank account </text>
 					<bold>
-						<parameter name="Account" />
+						<parameter name="account" />
 					</bold>
 					<text> (IBAN format) via </text>
 					<bold>
