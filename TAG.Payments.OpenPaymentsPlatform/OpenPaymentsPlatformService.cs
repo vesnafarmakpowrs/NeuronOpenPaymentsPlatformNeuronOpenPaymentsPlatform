@@ -728,7 +728,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             if (ContractParameters.TryGetValue("tabId", out object ObjTabId) && ObjTabId is string tabId)
                 TabId = tabId;
 
-            if (ContractParameters.TryGetValue("callBackURL", out object ObjcallBackURL) && ObjcallBackURL is string callBackURL)
+            if (ContractParameters.TryGetValue("callBackUrl", out object ObjcallBackURL) && ObjcallBackURL is string callBackURL)
                 CallBackUrl = callBackURL;
 
             if (ContractParameters.TryGetValue("requestFromMobilePhone", out object ObjIsMobile))
