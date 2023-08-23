@@ -322,7 +322,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if(ChallengeData is null)
                 {
-                    throw new Exception("Challenge data could not be null.")
+                    throw new Exception("Challenge data could not be null.");
                 }
 
                 if (ClientUrlCallback != null)
