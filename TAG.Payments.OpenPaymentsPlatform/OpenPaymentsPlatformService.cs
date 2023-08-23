@@ -512,7 +512,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     AuthorizationStatusValue = P2.Status;
                     ErrorMessages = P2.Messages;
 
-                    await DisplayUserMessage(TabId, "Transaction is in progress", true);
                     if (!string.IsNullOrEmpty(P2.ChallengeData?.BankIdURL))
                     {
                         switch (AuthorizationStatusValue)
@@ -544,11 +543,13 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         }
                     }
                 }
-
+               
                 if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
                 {
+                    await DisplayUserMessage(TabId, ErrorMessages[0].Text, true);
                     return new PaymentResult(ErrorMessages[0].Text);
                 }
+                await DisplayUserMessage(TabId, "Transaction is in progress", true);
 
                 PaymentTransactionStatus Status = await Client.GetPaymentInitiationStatus(Product, PaymentInitiationReference.PaymentId, Operation);
 
