@@ -320,6 +320,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 Log.Informational("RequestClientVerification started");
 
+                if(ChallengeData is null)
+                {
+                    throw new Exception("Challenge data could not be null.")
+                }
+
                 if (ClientUrlCallback != null)
                 {
                     if (!string.IsNullOrEmpty(ChallengeData?.BankIdURL))
@@ -336,7 +341,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     }
                 }
 
-                if (!string.IsNullOrEmpty(TabId) && !string.IsNullOrEmpty(ChallengeData?.BankIdURL))
+                if (!string.IsNullOrEmpty(TabId))
                 {
                     await ClientEvents.PushEvent(new string[] { TabId.ToString() }, "ShowQRCode",
                             JSON.Encode(new Dictionary<string, object>()
