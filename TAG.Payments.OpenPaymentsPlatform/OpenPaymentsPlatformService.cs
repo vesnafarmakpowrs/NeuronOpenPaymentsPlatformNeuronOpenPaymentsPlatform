@@ -308,6 +308,58 @@ namespace TAG.Payments.OpenPaymentsPlatform
             return Configuration.IsWellDefined;
         }
 
+        private async Task RequestClientVerification(ClientUrlEventHandler ClientUrlCallback,
+                OpenPaymentsPlatformClient OPPClient,
+                ChallengeData ChallengeData,
+                string ScaOAuth,
+                string TabId,
+                object State,
+                string SuccessUrl)
+        {
+            try
+            {
+                Log.Informational("RequestClientVerification started");
+
+                if (ClientUrlCallback != null)
+                {
+                    if (!string.IsNullOrEmpty(ChallengeData?.BankIdURL))
+                    {
+                        await ClientUrlCallback(this, new ClientUrlEventArgs(
+                            ChallengeData.BankIdURL, State));
+                    }
+                    else if (!string.IsNullOrEmpty(ScaOAuth))
+                    {
+                        string Url = OPPClient.GetClientWebUrl(ScaOAuth,
+                            "https://lab.tagroot.io/ReturnFromPayment.md", SuccessUrl);
+
+                        await ClientUrlCallback(this, new ClientUrlEventArgs(Url, State));
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(TabId) && !string.IsNullOrEmpty(ChallengeData?.BankIdURL))
+                {
+                    await ClientEvents.PushEvent(new string[] { TabId.ToString() }, "ShowQRCode",
+                            JSON.Encode(new Dictionary<string, object>()
+                            {
+                                { "BankIdUrl", ChallengeData.BankIdURL},
+                                { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
+                                { "AutoStartToken", ChallengeData.AutoStartToken},
+                                { "ImageUrl",ChallengeData.ImageUrl},
+                                { "fromMobileDevice", false },
+                                { "title", "Authorize recipient" },
+                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
+                            }, false), true);
+                }
+
+                Log.Informational("RequestClientVerification finished");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex);
+                throw;
+            }
+        }
+
         /// <summary>
         /// Processes payment for buying eDaler.
         /// </summary>
@@ -366,7 +418,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 string PersonalID = GetPersonalID(PersonalNumber);
                 if (mode == OperationMode.Sandbox)
+                {
                     PersonalID = "";
+                }
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
                 if (!(P.Value is null))
@@ -432,39 +486,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Product, PaymentInitiationReference.PaymentId,
                     AuthorizationStatus.AuthorizationID, AuthenticationMethod.MethodId, Operation);
 
-                if (!string.IsNullOrEmpty(TabId))
-                {
-                    if (!(PsuDataResponse.ChallengeData is null) && !string.IsNullOrEmpty(TabId.ToString()))
-                    {
-                        await ClientEvents.PushEvent(new string[] { TabId.ToString() }, "ShowQRCode",
-                        JSON.Encode(new Dictionary<string, object>()
-                        {
-                                { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
-                                { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
-                                { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
-                                { "ImageUrl",PsuDataResponse.ChallengeData.ImageUrl },
-                                { "fromMobileDevice", false },
-                                { "title", "Authorize recipient" },
-                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                        }, false), true);
-                    }
-                }
-
-                if (!(ClientUrlCallback is null))
-                {
-                    if (!string.IsNullOrEmpty(PsuDataResponse.ChallengeData?.BankIdURL))
-                    {
-                        await ClientUrlCallback(this, new ClientUrlEventArgs(
-                            PsuDataResponse.ChallengeData.BankIdURL, State));
-                    }
-                    else if (!string.IsNullOrEmpty(PsuDataResponse.Links.ScaOAuth))
-                    {
-                        string Url = Client.GetClientWebUrl(PsuDataResponse.Links.ScaOAuth,
-                            "https://lab.tagroot.io/ReturnFromPayment.md", SuccessUrl);
-
-                        await ClientUrlCallback(this, new ClientUrlEventArgs(Url, State));
-                    }
-                }
+                await RequestClientVerification(ClientUrlCallback,
+                    Client,
+                    PsuDataResponse.ChallengeData,
+                    PsuDataResponse.Links?.ScaOAuth,
+                    TabId, State, SuccessUrl);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -478,16 +504,16 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     AuthorizationStatusValue != AuthorizationStatusValue.failed &&
                     DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
                 {
-                    await Task.Delay(Configuration.PollingIntervalSeconds * 1000);
+                    await Task.Delay(Configuration.PollingIntervalSeconds);
 
                     AuthorizationStatus P2 = await Client.GetPaymentInitiationAuthorizationStatus(
                         Product, PaymentInitiationReference.PaymentId, AuthorizationStatus.AuthorizationID, Operation);
+
                     AuthorizationStatusValue = P2.Status;
                     ErrorMessages = P2.Messages;
 
-                    Log.Informational("GetPaymentInitiationAuthorizationStatus");
                     await DisplayUserMessage(TabId, "Transaction is in progress", true);
-                    if (!string.IsNullOrEmpty(P2.ChallengeData?.BankIdURL) && !(ClientUrlCallback is null))
+                    if (!string.IsNullOrEmpty(P2.ChallengeData?.BankIdURL))
                     {
                         switch (AuthorizationStatusValue)
                         {
@@ -499,8 +525,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                     PaymentAuthorizationStarted = true;
                                     Log.Informational("AuthorizationStatusValue.started");
 
-                                    ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
-                                    await ClientUrlCallback(this, e);
+                                    await RequestClientVerification(ClientUrlCallback,
+                                        Client, P2.ChallengeData, null, TabId, State, SuccessUrl);
                                 }
                                 break;
 
@@ -511,8 +537,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                     CreditorAuthorizationStarted = true;
                                     Log.Informational("AuthorizationStatusValue.authenticationStarted");
 
-                                    ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
-                                    await ClientUrlCallback(this, e);
+                                    await RequestClientVerification(ClientUrlCallback,
+                                       Client, P2.ChallengeData, null, TabId, State, SuccessUrl);
                                 }
                                 break;
                         }
@@ -575,7 +601,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 {
                     await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
                 }
-                   
+
                 await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
                 return new PaymentResult(Amount, Currency);
             }
@@ -759,21 +785,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             return null;
         }
-        /// <summary>
-        /// Gets available payment options for buying eDaler.
-        /// </summary>
-        /// <param name="IdentityProperties">Properties engraved into the legal identity that will performm the request.</param>
-        /// <param name="SuccessUrl">Optional Success URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-        /// <param name="FailureUrl">Optional Failure URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-        /// <param name="CancelUrl">Optional Cancel URL the service provider can open on the client from a client web page, if getting options has succeeded.</param>
-        /// <param name="ClientUrlCallback">Method to call if the payment service
-        /// requests an URL to be displayed on the client.</param>
-		/// <param name="SessionId">Session ID</param>
-		/// <param name="TabId">Tab ID</param>
-		/// <param name="RequestFromMobilePhone">If request originates from mobile phone. (true)
-		/// or web/desktop/other (false).</param>
-        /// <returns>Array of dictionaries, each dictionary representing a set of parameters that can be selected in the
-        /// contract to sign.</returns>
 
         /// <summary>
         /// Gets an URL that can be used to start the BankID app on a desptop.
@@ -812,7 +823,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             string SuccessUrl, string FailureUrl, string CancelUrl, string TabId, bool RequestFromMobilePhone, string RemoteEndpoint)
         {
-
             IPAddress.TryParse(RemoteEndpoint, out IPAddress ClientIpAddress);
 
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
@@ -829,7 +839,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 return new IDictionary<CaseInsensitiveString, object>[0];
 
             Log.Informational("Account" + Account + "PersonalNumber" + PersonalNumber);
-
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
                 ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
@@ -860,7 +869,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 AuthenticationMethod Method = null;
 
-
                 if (!string.IsNullOrEmpty(TabId))
                     if (RequestFromMobilePhone)
                     {
@@ -873,10 +881,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                               ?? Status.GetAuthenticationMethod("mbid_animated_qr_image")
                               ?? Status.GetAuthenticationMethod("mbid")
                               ?? Status.GetAuthenticationMethod("mbid_same_device");
-
-
                     }
-                Log.Informational("Method" + Method.Name.ToString() + "TabID" + TabId + "requestFromMobilePhone" + RequestFromMobilePhone);
 
                 if (Method is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
@@ -887,20 +892,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (PsuDataResponse is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
 
-                if (!(PsuDataResponse.ChallengeData is null) && !string.IsNullOrEmpty(TabId))
-                {
-                    await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
-                   JSON.Encode(new Dictionary<string, object>()
-                   {
-                                { "BankIdUrl", PsuDataResponse.ChallengeData.BankIdURL},
-                                { "MobileAppUrl",  GetMobileAppUrl(null, PsuDataResponse.ChallengeData.AutoStartToken)},
-                                { "AutoStartToken", PsuDataResponse.ChallengeData.AutoStartToken},
-                                { "ImageUrl",PsuDataResponse.ChallengeData.ImageUrl },
-                                { "fromMobileDevice", RequestFromMobilePhone },
-                                { "title", "Authorize recipient" },
-                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                   }, false), true);
-                }
+                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, null, SuccessUrl);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -931,11 +923,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                             if (!PaymentAuthorizationStarted)
                             {
-
                                 PaymentAuthorizationStarted = true;
-
-                                //ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
-                                //await ClientUrlCallback(this, e);
+                                await RequestClientVerification(null, Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty);
                             }
                             break;
 
@@ -946,14 +935,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                             {
                                 CreditorAuthorizationStarted = true;
-
-                                //ClientUrlEventArgs e = new ClientUrlEventArgs(P2.ChallengeData.BankIdURL, State);
-                                //await ClientUrlCallback(this, e);
+                                await RequestClientVerification(null, Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty);
                             }
                             break;
                     }
                 }
-
 
                 ConsentStatusValue ConsentStatusValue = await Client.GetConsentStatus(Consent.ConsentID, Operation);
                 switch (ConsentStatusValue)
@@ -1128,7 +1114,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     AuthorizationStatusValue != AuthorizationStatusValue.failed &&
                     DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
                 {
-                    await Task.Delay(Configuration.PollingIntervalSeconds * 1000);
+                    await Task.Delay(Configuration.PollingIntervalSeconds);
 
                     AuthorizationStatus P2 = await Client.GetConsentAuthorizationStatus(Consent.ConsentID, Status.AuthorizationID, Operation);
 
