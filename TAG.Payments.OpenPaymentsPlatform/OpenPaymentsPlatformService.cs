@@ -320,7 +320,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 Log.Informational("RequestClientVerification started");
 
-                if(ChallengeData is null)
+                if (ChallengeData is null)
                 {
                     throw new Exception("Challenge data could not be null.");
                 }
@@ -548,7 +548,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         }
                     }
                 }
-               
+
                 if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
                 {
                     await DisplayUserMessage(TabId, ErrorMessages[0].Text, true);
@@ -1237,8 +1237,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
         {
-            Log.Informational("New VERSION SELLEDALER 2");
-
             ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
             if (!Configuration.IsWellDefined)
                 return new PaymentResult("Service not configured properly.");
@@ -1271,7 +1269,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 return new PaymentResult("Service not configured properly.");
             try
             {
-                string PersonalID = GetPersonalID(Configuration.PersonalID);
+                string PersonalID = mode != OperationMode.Sandbox ? GetPersonalID(Configuration.PersonalID) : string.Empty;
                 string OrganizationID = GetPersonalID(Configuration.OrganizationID);
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
