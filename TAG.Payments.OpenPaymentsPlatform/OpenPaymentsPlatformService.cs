@@ -774,8 +774,20 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             BankAccount = ContractAccount;
 
-            if (!(IdentityProperties.TryGetValue("PNR", out PersonalNumber)))
-                return "Personal number missing in identity.";
+            //User for payment link.
+            if (ContractParameters.TryGetValue("BuyerPersonalNum", out object PersonalNumberObject))
+            {
+                PersonalNumber = PersonalNumberObject.ToString();
+            }
+            else
+            {
+                IdentityProperties.TryGetValue("PNR", out PersonalNumber);
+            }
+
+            if (string.IsNullOrEmpty(PersonalNumber))
+            {
+                return "Personal number missing in identity or contract parameters.";
+            }
 
             if (ContractParameters.TryGetValue("Message", out Obj))
             {
