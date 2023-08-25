@@ -775,7 +775,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             BankAccount = ContractAccount;
 
             //User for payment link.
-            if (ContractParameters.TryGetValue("BuyerPersonalNum", out object PersonalNumberObject))
+            if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject))
             {
                 PersonalNumber = PersonalNumberObject.ToString();
             }
@@ -788,6 +788,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 return "Personal number missing in identity or contract parameters.";
             }
+
+            Log.Informational("Personal number to authorize: " + PersonalNumber);
 
             if (ContractParameters.TryGetValue("Message", out Obj))
             {
