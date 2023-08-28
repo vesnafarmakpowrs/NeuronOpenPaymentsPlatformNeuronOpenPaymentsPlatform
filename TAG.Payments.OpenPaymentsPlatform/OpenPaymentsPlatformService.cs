@@ -27,11 +27,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
     {
         private static readonly Dictionary<string, string> buyTemplateIdsProduction = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2c7774bc-5b01-2ea3-4413-e95df8993592@legal.neuron.vaulter.se" },
-            { "ESSESESS", "2c777286-5b01-2e72-4413-e95df869a2ca@legal.neuron.vaulter.se" },
-            { "HANDSESS", "2c777461-5b01-2e9c-4413-e95df8262263@legal.neuron.vaulter.se" },
-            { "NDEASESS", "2c777366-5b01-2e8a-4413-e95df8946858@legal.neuron.vaulter.se" },
-            { "SWEDSESS", "2c7773ed-5b01-2e94-4413-e95df8049e80@legal.neuron.vaulter.se" },
+            { "ELLFSESS", "2c7b3600-52fa-8ed9-f006-a2fcbee2ecb8@legal.neuron.vaulter.se" },
+            { "ESSESESS", "2c7b3650-52fa-8ee0-f006-a2fcbe628944@legal.neuron.vaulter.se" },
+            { "HANDSESS", "2c7b365d-52fa-8ee2-f006-a2fcbe69afc3@legal.neuron.vaulter.se" },
+            { "NDEASESS", "2c7b366c-52fa-8ee4-f006-a2fcbe6758e5@legal.neuron.vaulter.se" },
+            { "SWEDSESS", "2c7b3676-52fa-8ee6-f006-a2fcbe409d3b@legal.neuron.vaulter.se" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },
@@ -45,11 +45,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private static readonly Dictionary<string, string> buyTemplateIdsSandbox = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2c68cbf3-6675-1c88-940b-638d480c94dc@legal.lab.neuron.vaulter.rs" },
-            { "ESSESESS", "2c68cc04-6675-d5dc-940b-638d48f996e6@legal.lab.neuron.vaulter.rs" },
-            { "HANDSESS", "2c68cc19-6676-b2e2-940b-638d48dcc131@legal.lab.neuron.vaulter.rs" },
-            { "NDEASESS", "2c68cc2e-6677-a0c5-940b-638d486fe39d@legal.lab.neuron.vaulter.rs" },
-            { "SWEDSESS", "2c68cc3a-6678-2918-940b-638d487fc024@legal.lab.neuron.vaulter.rs" },
+            { "ELLFSESS", "2c7b344c-18b8-eb8d-1401-94b03925ba17@legal.lab.neuron.vaulter.rs" },
+            { "ESSESESS", "2c7b347b-18b8-eb91-1401-94b039eee6bd@legal.lab.neuron.vaulter.rs" },
+            { "HANDSESS", "2c7b34a3-18b8-eb95-1401-94b03923de58@legal.lab.neuron.vaulter.rs" },
+            { "NDEASESS", "2c7b34d7-18b8-eb97-1401-94b03902e615@legal.lab.neuron.vaulter.rs" },
+            { "SWEDSESS", "2c7b3501-18b8-eb9b-1401-94b039eac862@legal.lab.neuron.vaulter.rs" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },

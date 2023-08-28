@@ -86,6 +86,13 @@
 				</paragraph>
 			</description>
 		</stringParameter>
+		<stringParameter name="personalNumber">
+			<description xml:lang="en">
+				<paragraph>
+					<text>Personal number of person who pays</text>
+				</paragraph>
+			</description>
+		</stringParameter>
 	</parameters>
 	<humanReadableText xml:lang="en">
 		<paragraph>
