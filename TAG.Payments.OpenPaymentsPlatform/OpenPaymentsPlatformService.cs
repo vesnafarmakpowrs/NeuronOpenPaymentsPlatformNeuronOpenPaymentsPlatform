@@ -314,7 +314,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 string ScaOAuth,
                 string TabId,
                 object State,
-                string SuccessUrl)
+                string SuccessUrl,
+                bool shouldInvokeCallback = true)
         {
             try
             {
@@ -325,7 +326,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     throw new Exception("Challenge data could not be null.");
                 }
 
-                if (ClientUrlCallback != null)
+                if (ClientUrlCallback != null && shouldInvokeCallback)
                 {
                     if (!string.IsNullOrEmpty(ChallengeData?.BankIdURL))
                     {
@@ -343,17 +344,19 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (!string.IsNullOrEmpty(TabId))
                 {
-                    await ClientEvents.PushEvent(new string[] { TabId.ToString() }, "ShowQRCode",
-                            JSON.Encode(new Dictionary<string, object>()
+                    string eventMessage = JSON.Encode(new Dictionary<string, object>()
                             {
-                                { "BankIdUrl", ChallengeData.BankIdURL},
+                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
                                 { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
-                                { "AutoStartToken", ChallengeData.AutoStartToken},
-                                { "ImageUrl",ChallengeData.ImageUrl},
+                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                                { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
                                 { "fromMobileDevice", false },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                            }, false), true);
+                            }, false);
+
+                    Log.Informational(eventMessage);
+                    await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode", eventMessage, true);
                 }
 
                 Log.Informational("RequestClientVerification finished");
@@ -528,10 +531,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 {
                                     PaymentAuthorizationStarted = true;
                                     Log.Informational("AuthorizationStatusValue.started");
-
-                                    await RequestClientVerification(ClientUrlCallback,
-                                        Client, P2.ChallengeData, null, TabId, State, SuccessUrl);
                                 }
+
+                                await RequestClientVerification(ClientUrlCallback,
+                                        Client, P2.ChallengeData, null, TabId, State, SuccessUrl, !PaymentAuthorizationStarted);
                                 break;
 
                             case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -540,10 +543,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 {
                                     CreditorAuthorizationStarted = true;
                                     Log.Informational("AuthorizationStatusValue.authenticationStarted");
-
-                                    await RequestClientVerification(ClientUrlCallback,
-                                       Client, P2.ChallengeData, null, TabId, State, SuccessUrl);
                                 }
+
+                                await RequestClientVerification(ClientUrlCallback,
+                                      Client, P2.ChallengeData, null, TabId, State, SuccessUrl, !CreditorAuthorizationStarted);
                                 break;
                         }
                     }
@@ -813,6 +816,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// <returns>URL for starting a BankID app on a desktop.</returns>
         public string GetMobileAppUrl(string RedirectUrl, string AutoStartToken)
         {
+            if (string.IsNullOrEmpty(AutoStartToken))
+            {
+                return string.Empty;
+            }
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("bankid://?autostarttoken=");
@@ -944,8 +952,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             if (!PaymentAuthorizationStarted)
                             {
                                 PaymentAuthorizationStarted = true;
-                                await RequestClientVerification(null, Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty);
                             }
+
+                            await RequestClientVerification(null,
+                                Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty, !PaymentAuthorizationStarted);
                             break;
 
                         case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -955,8 +965,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                             {
                                 CreditorAuthorizationStarted = true;
-                                await RequestClientVerification(null, Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty);
                             }
+
+                            await RequestClientVerification(null,
+                                Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty, !CreditorAuthorizationStarted);
                             break;
                     }
                 }
