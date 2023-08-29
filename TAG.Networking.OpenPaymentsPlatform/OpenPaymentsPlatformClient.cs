@@ -1209,18 +1209,7 @@ namespace TAG.Networking.OpenPaymentsPlatform
                 throw new IOException("Unable to decode response.");
             }
 
-            AuthenticationMethod[] Methods = DecodeAuthenticationMethods(ScaMethods);
-
-            if (Methods != null)
-            {
-                Log.Informational("Available authorization methods: ");
-                foreach (var item in Methods)
-                {
-                    Log.Informational("MethodName: " + item.Name);
-                    Log.Informational("MethodId: " + item.MethodId);
-                    Log.Informational("Type: " + item.Type.ToString());
-                }
-            }
+            AuthenticationMethod[] Methods = DecodeAuthenticationMethods(ScaMethods);            
 
             return new AuthorizationInformation(AuthorisationId, ScaStatus, Methods,
                 new Links(Links));
