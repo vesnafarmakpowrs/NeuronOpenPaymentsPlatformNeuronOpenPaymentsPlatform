@@ -314,6 +314,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 string ScaOAuth,
                 string TabId,
                 bool RequestFromMobilePhone,
+                bool IsPaymentInitialization,
                 object State,
                 string SuccessUrl,
                 bool shouldInvokeCallback = true)
@@ -352,6 +353,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
                                 { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
                                 { "fromMobileDevice", RequestFromMobilePhone },
+                                { "isPaymentInitialization", IsPaymentInitialization },
                                 { "title", "Authorize recipient" },
                                 { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
                             }, false);
@@ -499,7 +501,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Client,
                     PsuDataResponse.ChallengeData,
                     PsuDataResponse.Links?.ScaOAuth,
-                    TabId, RequestFromMobilePhone, State, SuccessUrl);
+                    TabId, true, RequestFromMobilePhone, State, SuccessUrl);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -535,7 +537,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
-                                        Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone, State, SuccessUrl, !PaymentAuthorizationStarted);
+                                        Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone,true, State, SuccessUrl, !PaymentAuthorizationStarted);
                                 break;
 
                             case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -547,7 +549,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
-                                      Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone, State, SuccessUrl, !CreditorAuthorizationStarted);
+                                      Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone,true, State, SuccessUrl, !CreditorAuthorizationStarted);
                                 break;
                         }
                     }
@@ -921,7 +923,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (PsuDataResponse is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
 
-                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, RequestFromMobilePhone, null, SuccessUrl);
+                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, false, RequestFromMobilePhone, null, SuccessUrl);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -956,7 +958,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             }
 
                             await RequestClientVerification(null,
-                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone, null, string.Empty, !PaymentAuthorizationStarted);
+                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone,false, null, string.Empty, !PaymentAuthorizationStarted);
                             break;
 
                         case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -969,7 +971,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             }
 
                             await RequestClientVerification(null,
-                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone, null, string.Empty, !CreditorAuthorizationStarted);
+                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone, false, null, string.Empty, !CreditorAuthorizationStarted);
                             break;
                     }
                 }
