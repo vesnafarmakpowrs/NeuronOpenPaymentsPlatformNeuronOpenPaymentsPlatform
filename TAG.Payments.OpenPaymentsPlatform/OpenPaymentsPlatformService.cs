@@ -27,11 +27,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
     {
         private static readonly Dictionary<string, string> buyTemplateIdsProduction = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2c7b3600-52fa-8ed9-f006-a2fcbee2ecb8@legal.neuron.vaulter.se" },
-            { "ESSESESS", "2c7b3650-52fa-8ee0-f006-a2fcbe628944@legal.neuron.vaulter.se" },
-            { "HANDSESS", "2c7b365d-52fa-8ee2-f006-a2fcbe69afc3@legal.neuron.vaulter.se" },
-            { "NDEASESS", "2c7b366c-52fa-8ee4-f006-a2fcbe6758e5@legal.neuron.vaulter.se" },
-            { "SWEDSESS", "2c7b3676-52fa-8ee6-f006-a2fcbe409d3b@legal.neuron.vaulter.se" },
+            { "ELLFSESS", "2c81a770-7706-2803-881f-2de32a8d11dd@legal.neuron.vaulter.se" },
+            { "ESSESESS", "2c81a79d-7706-2807-881f-2de32ae6dfe4@legal.neuron.vaulter.se" },
+            { "HANDSESS", "2c81a7c1-7706-280a-881f-2de32a7fabe6@legal.neuron.vaulter.se" },
+            { "NDEASESS", "2c81a7f2-7706-2810-881f-2de32a0ffef4@legal.neuron.vaulter.se" },
+            { "SWEDSESS", "2c81a822-7706-2818-881f-2de32a994c46@legal.neuron.vaulter.se" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },
@@ -45,11 +45,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private static readonly Dictionary<string, string> buyTemplateIdsSandbox = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2c7b344c-18b8-eb8d-1401-94b03925ba17@legal.lab.neuron.vaulter.rs" },
-            { "ESSESESS", "2c7b347b-18b8-eb91-1401-94b039eee6bd@legal.lab.neuron.vaulter.rs" },
-            { "HANDSESS", "2c7b34a3-18b8-eb95-1401-94b03923de58@legal.lab.neuron.vaulter.rs" },
-            { "NDEASESS", "2c7b34d7-18b8-eb97-1401-94b03902e615@legal.lab.neuron.vaulter.rs" },
-            { "SWEDSESS", "2c7b3501-18b8-eb9b-1401-94b039eac862@legal.lab.neuron.vaulter.rs" },
+            { "ELLFSESS", "2c81a4e6-4657-f730-3c14-b1fbd2dadeb2@legal.lab.neuron.vaulter.rs" },
+            { "ESSESESS", "2c81a497-4657-f727-3c14-b1fbd2511f68@legal.lab.neuron.vaulter.rs" },
+            { "HANDSESS", "2c81a50a-4657-f734-3c14-b1fbd28ab9b3@legal.lab.neuron.vaulter.rs" },
+            { "NDEASESS", "2c81a52c-4657-f736-3c14-b1fbd2bd7737@legal.lab.neuron.vaulter.rs" },
+            { "SWEDSESS", "2c81a5ea-9273-b901-4415-d26120d4acf2@legal.lab.neuron.vaulter.rs" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },
@@ -410,11 +410,17 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 out string BankAccount, out string TextMessage, out string TabId, out string CallBackUrl, out bool RequestFromMobilePhone);
 
             if (!string.IsNullOrEmpty(Message))
+            {
+                await DisplayUserMessage(TabId, Message);
                 return new PaymentResult(Message);
+            }                
 
             Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
+            {
+                await DisplayUserMessage(TabId, Message);
                 return new PaymentResult(Message);
+            }               
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
                 ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
@@ -537,7 +543,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
-                                        Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone,true, State, SuccessUrl, !PaymentAuthorizationStarted);
+                                        Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone, true, State, SuccessUrl, !PaymentAuthorizationStarted);
                                 break;
 
                             case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -549,7 +555,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
-                                      Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone,true, State, SuccessUrl, !CreditorAuthorizationStarted);
+                                      Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone, true, State, SuccessUrl, !CreditorAuthorizationStarted);
                                 break;
                         }
                     }
@@ -781,9 +787,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
             BankAccount = ContractAccount;
 
             //User for payment link.
-            if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject))
+            if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject) &&
+                PersonalNumberObject is string PersonalNumberString &&
+                !string.IsNullOrEmpty(PersonalNumberString))
             {
-                PersonalNumber = PersonalNumberObject.ToString();
+                PersonalNumber = PersonalNumberString;
             }
             else
             {
@@ -958,7 +966,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             }
 
                             await RequestClientVerification(null,
-                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone,false, null, string.Empty, !PaymentAuthorizationStarted);
+                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone, false, null, string.Empty, !PaymentAuthorizationStarted);
                             break;
 
                         case AuthorizationStatusValue.authoriseCreditorAccountStarted:

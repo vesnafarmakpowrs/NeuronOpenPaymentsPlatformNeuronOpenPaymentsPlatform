@@ -58,35 +58,35 @@
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="tabId">
+		<stringParameter name="tabId" value="">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Tab Id</text>
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="requestFromMobilePhone">
+		<stringParameter name="requestFromMobilePhone" value="">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Is requested from mobile phone</text>
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="message">
+		<stringParameter name="message" value="Vaulter">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Message send to banks</text>
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="callBackUrl">
+		<stringParameter name="callBackUrl" value="">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Send info when transaction is completed</text>
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="personalNumber">
+		<stringParameter name="personalNumber" value="">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Personal number of person who pays</text>
