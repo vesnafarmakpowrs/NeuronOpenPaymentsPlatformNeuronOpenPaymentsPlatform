@@ -501,7 +501,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Client,
                     PsuDataResponse.ChallengeData,
                     PsuDataResponse.Links?.ScaOAuth,
-                    TabId, true, RequestFromMobilePhone, State, SuccessUrl);
+                    TabId, RequestFromMobilePhone, true, State, SuccessUrl);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -923,7 +923,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (PsuDataResponse is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
 
-                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, false, RequestFromMobilePhone, null, SuccessUrl);
+                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, RequestFromMobilePhone, false, null, SuccessUrl);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
