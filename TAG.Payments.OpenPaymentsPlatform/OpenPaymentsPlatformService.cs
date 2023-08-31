@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
+using TAG.Payments.OpenPaymentsPlatform.Models;
 using Waher.Content;
 using Waher.Content.Html.Elements;
 using Waher.Content.Markdown;
@@ -16,6 +17,7 @@ using Waher.Persistence.Serialization;
 using Waher.Runtime.Inventory;
 using Waher.Runtime.Settings;
 using Waher.Script;
+using Waher.Script.Functions.Vectors;
 using Waher.Security;
 
 namespace TAG.Payments.OpenPaymentsPlatform
@@ -313,22 +315,21 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 ChallengeData ChallengeData,
                 string ScaOAuth,
                 string TabId,
-                bool RequestFromMobilePhone,
-                bool IsPaymentInitialization,
                 object State,
                 string SuccessUrl,
-                bool shouldInvokeCallback = true)
+                AuthenticationMethod AuthenticationMethod,
+                bool shouldRefreshBankIdUrl = true)
         {
             try
             {
                 Log.Informational("RequestClientVerification started");
 
-                if (ChallengeData is null)
+                if (AuthenticationMethod is null || ChallengeData is null)
                 {
-                    throw new Exception("Challenge data could not be null.");
+                    throw new Exception("Authentication method or Challenge data could not be null");
                 }
 
-                if (ClientUrlCallback != null && shouldInvokeCallback)
+                if (ClientUrlCallback != null && shouldRefreshBankIdUrl)
                 {
                     if (!string.IsNullOrEmpty(ChallengeData?.BankIdURL))
                     {
@@ -344,22 +345,29 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     }
                 }
 
-                if (!string.IsNullOrEmpty(TabId))
+                if (string.IsNullOrEmpty(TabId))
                 {
-                    string eventMessage = JSON.Encode(new Dictionary<string, object>()
-                            {
-                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
-                                { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
-                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
-                                { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
-                                { "fromMobileDevice", RequestFromMobilePhone },
-                                { "isPaymentInitialization", IsPaymentInitialization },
-                                { "title", "Authorize recipient" },
-                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                            }, false);
+                    return;
+                }
 
-                    Log.Informational(eventMessage);
-                    await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode", eventMessage, true);
+                Log.Informational("Chosen AuthenticationMethodId: " + AuthenticationMethod.MethodId);
+
+                switch (AuthenticationMethod.MethodId)
+                {
+                    case AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN:
+                    case AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE:
+                        await RefreshQrCode(TabId, ChallengeData);
+                        break;
+
+                    case AuthenticationMethodId.MBID:
+                    case AuthenticationMethodId.MBID_SAME_DEVICE:
+                        if (!shouldRefreshBankIdUrl)
+                        {
+                            return;
+                        }
+
+                        await RequestOpenBankIdApp(TabId, ChallengeData);
+                        break;
                 }
 
                 Log.Informational("RequestClientVerification finished");
@@ -369,6 +377,35 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 Log.Error(ex);
                 throw;
             }
+        }
+
+        private async Task RequestOpenBankIdApp(string TabId, ChallengeData ChallengeData)
+        {
+            string eventMessage = JSON.Encode(new Dictionary<string, object>()
+                            {
+                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
+                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                                { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)}
+                            }, false);
+
+            Log.Informational(eventMessage);
+            await ClientEvents.PushEvent(new string[] { TabId }, "OpenBankIdApp", eventMessage, true);
+        }
+
+        private async Task RefreshQrCode(string TabId, ChallengeData ChallengeData)
+        {
+            string eventMessage = JSON.Encode(new Dictionary<string, object>()
+                            {
+                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
+                                { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
+                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                                { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
+                                { "title", "Authorize recipient" },
+                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
+                            }, false);
+
+            Log.Informational(eventMessage);
+            await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode", eventMessage, true);
         }
 
         /// <summary>
@@ -413,14 +450,14 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 await DisplayUserMessage(TabId, Message);
                 return new PaymentResult(Message);
-            }                
+            }
 
             Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
             {
                 await DisplayUserMessage(TabId, Message);
                 return new PaymentResult(Message);
-            }               
+            }
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
                 ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
@@ -477,20 +514,20 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Product, PaymentInitiationReference.PaymentId, Operation,
                     SuccessUrl, FailureUrl);
 
-                AuthenticationMethod AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_same_device")
-                    ?? AuthorizationStatus.GetAuthenticationMethod("mbid");
+                AuthenticationMethod AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
+                    ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID);
 
                 if (RequestFromMobilePhone)
                 {
-                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_same_device")
-                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid");
+                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
+                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID);
                 }
                 else
                 {
-                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_token")
-                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid_animated_qr_image")
-                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid")
-                        ?? AuthorizationStatus.GetAuthenticationMethod("mbid_same_device");
+                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN)
+                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE)
+                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID)
+                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE);
                 }
 
                 if (AuthenticationMethod is null)
@@ -507,7 +544,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Client,
                     PsuDataResponse.ChallengeData,
                     PsuDataResponse.Links?.ScaOAuth,
-                    TabId, RequestFromMobilePhone, true, State, SuccessUrl);
+                    TabId,
+                    State, SuccessUrl, AuthenticationMethod);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -543,7 +581,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
-                                        Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone, true, State, SuccessUrl, !PaymentAuthorizationStarted);
+                                        Client, P2.ChallengeData, null, TabId, State, SuccessUrl, AuthenticationMethod, !PaymentAuthorizationStarted);
                                 break;
 
                             case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -555,7 +593,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
-                                      Client, P2.ChallengeData, null, TabId, RequestFromMobilePhone, true, State, SuccessUrl, !CreditorAuthorizationStarted);
+                                      Client, P2.ChallengeData, null, TabId, State, SuccessUrl, AuthenticationMethod, !CreditorAuthorizationStarted);
                                 break;
                         }
                     }
@@ -911,15 +949,15 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (!string.IsNullOrEmpty(TabId))
                     if (RequestFromMobilePhone)
                     {
-                        Method = Status.GetAuthenticationMethod("mbid_same_device")
-                            ?? Status.GetAuthenticationMethod("mbid");
+                        Method = Status.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
+                            ?? Status.GetAuthenticationMethod(AuthenticationMethodId.MBID);
                     }
                     else
                     {
-                        Method = Status.GetAuthenticationMethod("mbid_animated_qr_token")
-                              ?? Status.GetAuthenticationMethod("mbid_animated_qr_image")
-                              ?? Status.GetAuthenticationMethod("mbid")
-                              ?? Status.GetAuthenticationMethod("mbid_same_device");
+                        Method = Status.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN)
+                              ?? Status.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE)
+                              ?? Status.GetAuthenticationMethod(AuthenticationMethodId.MBID)
+                              ?? Status.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE);
                     }
 
                 if (Method is null)
@@ -931,7 +969,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (PsuDataResponse is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
 
-                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, RequestFromMobilePhone, false, null, SuccessUrl);
+                await RequestClientVerification(null, Client, PsuDataResponse.ChallengeData, null, TabId, null, SuccessUrl, Method);
 
                 TppMessage[] ErrorMessages = PsuDataResponse.Messages;
                 AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
@@ -966,7 +1004,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             }
 
                             await RequestClientVerification(null,
-                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone, false, null, string.Empty, !PaymentAuthorizationStarted);
+                                Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty, Method, !PaymentAuthorizationStarted);
                             break;
 
                         case AuthorizationStatusValue.authoriseCreditorAccountStarted:
@@ -979,7 +1017,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             }
 
                             await RequestClientVerification(null,
-                                Client, P2.ChallengeData, string.Empty, TabId, RequestFromMobilePhone, false, null, string.Empty, !CreditorAuthorizationStarted);
+                                Client, P2.ChallengeData, string.Empty, TabId, null, string.Empty, Method, !CreditorAuthorizationStarted);
                             break;
                     }
                 }
@@ -1118,8 +1156,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 AuthorizationInformation Status = await Client.StartConsentAuthorization(Consent.ConsentID, Operation);
 
-                AuthenticationMethod Method = Status.GetAuthenticationMethod("mbid_same_device")
-                    ?? Status.GetAuthenticationMethod("mbid");
+                AuthenticationMethod Method = Status.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
+                    ?? Status.GetAuthenticationMethod(AuthenticationMethodId.MBID);
 
                 if (Method is null)
                     return new IDictionary<CaseInsensitiveString, object>[0];
