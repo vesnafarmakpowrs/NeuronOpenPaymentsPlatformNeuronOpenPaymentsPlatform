@@ -872,7 +872,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             StringBuilder sb = new StringBuilder();
 
-            sb.Append("bankid://?autostarttoken=");
+            sb.Append("bankid:///?autostarttoken=");
             sb.Append(System.Web.HttpUtility.UrlEncode(AutoStartToken));
             sb.Append("&redirect=");
 
