@@ -448,14 +448,14 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             if (!string.IsNullOrEmpty(Message))
             {
-                await DisplayUserMessage(TabId, Message);
+                await DisplayUserMessage(TabId, Message, true);
                 return new PaymentResult(Message);
             }
 
             Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
             {
-                await DisplayUserMessage(TabId, Message);
+                await DisplayUserMessage(TabId, Message, true);
                 return new PaymentResult(Message);
             }
 
@@ -464,7 +464,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             if (Client is null)
             {
-                await DisplayUserMessage(TabId, "Service not configured properly.");
+                await DisplayUserMessage(TabId, "Service not configured properly.", true);
                 return new PaymentResult("Service not configured properly.");
             }
 
@@ -532,7 +532,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (AuthenticationMethod is null)
                 {
-                    await DisplayUserMessage(TabId, "Unable to find a Mobile Bank ID authorization method for the operation.");
+                    await DisplayUserMessage(TabId, "Unable to find a Mobile Bank ID authorization method for the operation.", true);
                     return new PaymentResult("Unable to find a Mobile Bank ID authorization method for the operation.");
                 }
 
@@ -604,7 +604,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     await DisplayUserMessage(TabId, ErrorMessages[0].Text, true);
                     return new PaymentResult(ErrorMessages[0].Text);
                 }
-                await DisplayUserMessage(TabId, "Transaction is in progress", true);
+                await DisplayUserMessage(TabId, "Transaction is in progress");
 
                 PaymentTransactionStatus Status = await Client.GetPaymentInitiationStatus(Product, PaymentInitiationReference.PaymentId, Operation);
 
@@ -623,7 +623,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                     if (!string.IsNullOrEmpty(s))
                     {
-                        await DisplayUserMessage(TabId, s);
+                        await DisplayUserMessage(TabId, s, true);
                         return new PaymentResult(s);
                     }
                 }
@@ -631,11 +631,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 switch (Status.Status)
                 {
                     case PaymentStatus.RJCT:
-                        await DisplayUserMessage(TabId, "Payment was rejected.");
+                        await DisplayUserMessage(TabId, "Payment was rejected.", true);
                         return new PaymentResult("Payment was rejected.");
 
                     case PaymentStatus.CANC:
-                        await DisplayUserMessage(TabId, "Payment was cancelled.");
+                        await DisplayUserMessage(TabId, "Payment was cancelled.", true);
                         return new PaymentResult("Payment was cancelled.");
                 }
 
@@ -645,11 +645,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         break;
 
                     case AuthorizationStatusValue.failed:
-                        await DisplayUserMessage(TabId, "Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
+                        await DisplayUserMessage(TabId, "Payment failed. (" + AuthorizationStatusValue.ToString() + ")", true);
                         return new PaymentResult("Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
 
                     default:
-                        await DisplayUserMessage(TabId, "Transaction took too long to complete.");
+                        await DisplayUserMessage(TabId, "Transaction took too long to complete.", true);
                         return new PaymentResult("Transaction took too long to complete.");
                 }
 
@@ -658,12 +658,12 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
                 }
 
-                await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true);
+                await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true, true);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
             {
-                await DisplayUserMessage(TabId, ex.Message);
+                await DisplayUserMessage(TabId, ex.Message, true);
                 return new PaymentResult(ex.Message);
             }
             finally
@@ -672,19 +672,19 @@ namespace TAG.Payments.OpenPaymentsPlatform
             }
         }
 
-        private async Task DisplayUserMessage(string tabId, string message, bool isSuccess = false)
+        private async Task DisplayUserMessage(string tabId, string message, bool isCompleted = false, bool isSuccess = false)
         {
             if (string.IsNullOrEmpty(tabId))
             {
                 return;
             }
 
-            Log.Informational("DisplayUserMessage  " + message);
             await ClientEvents.PushEvent(new string[] { tabId }, "DisplayTransactionResult",
                     JSON.Encode(new Dictionary<string, object>()
                     {
-                        { "ok", isSuccess },
-                        { "message", message },
+                        { "IsCompleted", isCompleted },
+                        { "IsSuccess", isSuccess },
+                        { "Message", message },
                     }, false), true);
         }
 
