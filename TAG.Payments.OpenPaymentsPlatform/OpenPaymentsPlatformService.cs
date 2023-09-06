@@ -653,11 +653,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         return new PaymentResult("Transaction took too long to complete.");
                 }
 
-                if (String.IsNullOrEmpty(CallBackUrl))
-                {
-                    await SendTransactionInfoToCallBackUrl(CallBackUrl, "PaymentCompleted");
-                }
-
                 await DisplayUserMessage(TabId, "Success. Thanks for using Vaulter.", true, true);
                 return new PaymentResult(Amount, Currency);
             }
@@ -1522,29 +1517,5 @@ namespace TAG.Payments.OpenPaymentsPlatform
         }
 
         #endregion
-
-
-        private async Task<string> SendTransactionInfoToCallBackUrl(string CallBackUrl, string Status)
-        {
-            try
-            {
-                object Result = await InternetContent.PostAsync(
-                    new Uri(CallBackUrl),
-                    new Dictionary<string, object>()
-                    {
-                        { "status", Status }
-                    },
-                    new KeyValuePair<string, string>("Accept", "application/json"));
-
-                Log.Informational("SendTransactionInfoTo:" + CallBackUrl);
-            }
-            catch (System.Exception ex)
-            {
-                Log.Error(ex);
-            }
-
-            return null;
-        }
-
     }
 }
