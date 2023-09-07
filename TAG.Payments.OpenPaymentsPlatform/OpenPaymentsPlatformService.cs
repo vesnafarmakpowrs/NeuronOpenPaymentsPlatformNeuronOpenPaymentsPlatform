@@ -47,11 +47,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private static readonly Dictionary<string, string> buyTemplateIdsSandbox = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2c81a4e6-4657-f730-3c14-b1fbd2dadeb2@legal.lab.neuron.vaulter.rs" },
-            { "ESSESESS", "2c81a497-4657-f727-3c14-b1fbd2511f68@legal.lab.neuron.vaulter.rs" },
-            { "HANDSESS", "2c81a50a-4657-f734-3c14-b1fbd28ab9b3@legal.lab.neuron.vaulter.rs" },
-            { "NDEASESS", "2c81a52c-4657-f736-3c14-b1fbd2bd7737@legal.lab.neuron.vaulter.rs" },
-            { "SWEDSESS", "2c81a5ea-9273-b901-4415-d26120d4acf2@legal.lab.neuron.vaulter.rs" },
+            { "ELLFSESS", "2c8c781d-da85-5b2c-7809-9867d326bac4@legal.lab.neuron.vaulter.rs" },
+            { "ESSESESS", "2c8c783f-da85-5b30-7809-9867d38bb592@legal.lab.neuron.vaulter.rs" },
+            { "HANDSESS", "2c8c7852-da85-5b32-7809-9867d3f7f04d@legal.lab.neuron.vaulter.rs" },
+            { "NDEASESS", "2c8c785f-da85-5b34-7809-9867d3b9594a@legal.lab.neuron.vaulter.rs" },
+            { "SWEDSESS", "2c8c786e-da85-5b36-7809-9867d3326ea8@legal.lab.neuron.vaulter.rs" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },

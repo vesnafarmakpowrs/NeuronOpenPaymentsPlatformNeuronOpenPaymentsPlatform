@@ -33,7 +33,7 @@
 		<templateOnly />
 	</parts>
 	<parameters>
-		<numericalParameter name="amount" exp="round(amount)=amount" min="0" minIncluded="false">
+		<numericalParameter name="amount" exp="amount>0" min="0" minIncluded="false">
 			<description xml:lang="en">
 				<paragraph>
 					<text>The amount of eDaler to sell.</text>
