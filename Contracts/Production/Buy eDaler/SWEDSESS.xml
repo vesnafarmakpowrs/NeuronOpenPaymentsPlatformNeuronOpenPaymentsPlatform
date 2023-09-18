@@ -76,7 +76,7 @@
 				</paragraph>
 			</description>
 		</stringParameter>
-		<stringParameter name="requestFromMobilePhone" value="">
+		<stringParameter name="requestFromMobilePhone" value="true">
 			<description xml:lang="en">
 				<paragraph>
 					<text>Is requested from mobile phone</text>

@@ -279,6 +279,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 					}
 
 					string Msg = Message.ToString().Trim();
+					Log.Informational(Msg);
 					if (!string.IsNullOrEmpty(Msg))
 					{
 						if (PushToClients)
