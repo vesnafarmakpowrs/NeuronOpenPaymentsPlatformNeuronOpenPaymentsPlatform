@@ -149,7 +149,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                         Status != AuthorizationStatusValue.failed &&
                         DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
                     {
-                        await Task.Delay(Configuration.PollingIntervalSeconds * 1000);
+                        await Task.Delay(Configuration.PollingIntervalSeconds);
 
                         AuthorizationStatus P;
 
