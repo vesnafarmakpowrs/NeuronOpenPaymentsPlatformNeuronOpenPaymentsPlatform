@@ -95,20 +95,6 @@ namespace TAG.Networking.OpenPaymentsPlatform
             this.AuthorizationID = AuthorizationId;
             this.Status = Status;
             this.AuthenticationMethods = AuthenticationMethods;
-
-            if (this.AuthenticationMethods != null)
-            {
-                _ = Task.Run(() =>
-                {
-                    Log.Informational("Available authorization methods: ");
-                    foreach (var item in this.AuthenticationMethods)
-                    {
-                        Log.Informational("MethodName: " + item.Name);
-                        Log.Informational("MethodId: " + item.MethodId);
-                        Log.Informational("Type: " + item.Type.ToString());
-                    }
-                });
-            }
         }
 
         /// <summary>
