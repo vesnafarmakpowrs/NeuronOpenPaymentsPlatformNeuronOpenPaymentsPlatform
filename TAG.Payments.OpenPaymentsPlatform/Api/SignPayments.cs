@@ -69,7 +69,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                 UserAgent.Contains("iphone") ||
                 UserAgent.Contains("ipad") ||
                 UserAgent.Contains("windows phone");
-            Log.Debug("UserAgent:" + UserAgent);
+
             Task _ = Task.Run(async () =>
             {
                 PaymentBasketReference Basket = null;
@@ -81,14 +81,12 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                 {
                     if (Payments.Length > 1)
                     {
-                        Log.Debug("CreatePaymentBasket");
                         Basket = await Client.CreatePaymentBasket(PaymentIds, Operation);
 
                         foreach (OutboundPayment Payment in Payments)
                             Payment.BasketId = Basket.BasketId;
 
                         await Database.Update(Payments);
-                        Log.Debug("StartPaymentBasketAuthorization:" + PaymentIds);
                         Authorization = await Client.StartPaymentBasketAuthorization(Basket.BasketId, Operation);
 
                         if (FromMobildeDevice)
@@ -105,15 +103,13 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                                    ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
                                    ?? throw new ServiceUnavailableException("Unable to find a Mobile Bank ID authorization method for the operation.");
                         }
-                        Log.Debug("Method:" + Method.Name);
-                        Log.Debug("PutPaymentBasketUserData" );
+
                         PsuDataResponse = await Client.PutPaymentBasketUserData(Basket.BasketId, Authorization.AuthorizationID,
                             Method.MethodId, Operation);
                     }
                     else if (Payments.Length == 1)
                     {
                         Basket = null;
-                        Log.Debug("StartPaymentInitiationAuthorization" + Payments[0].Product + " PaymentId:" + Payments[0].PaymentId);
                         Authorization = await Client.StartPaymentInitiationAuthorization(Payments[0].Product,
                             Payments[0].PaymentId, Operation);
 
@@ -131,8 +127,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                                     ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
                                     ?? throw new ServiceUnavailableException("Unable to find a Mobile Bank ID authorization method for the operation.");
                         }
-                        Log.Debug("Method:" + Method.Name);
-                        Log.Debug("PutPaymentBasketUserData");
+
                         PsuDataResponse = await Client.PutPaymentInitiationUserData(Payments[0].Product, Payments[0].PaymentId,
                             Authorization.AuthorizationID, Method.MethodId, Operation);
                     }
@@ -142,7 +137,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     string LastImageSent = string.Empty;
                     bool PaymentCodeSent = false;
                     bool CreditorAccountCodeSent = false;
-                    Log.Debug("PushQrCodeIfNecessary:" + PsuDataResponse.ChallengeData);
+
                     await PushQrCodeIfNecessary(TabId, PsuDataResponse.Status, PsuDataResponse.ChallengeData, FromMobildeDevice,
                         ref PaymentCodeSent, ref CreditorAccountCodeSent, ref LastImageSent);
 
@@ -154,33 +149,26 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                         Status != AuthorizationStatusValue.failed &&
                         DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
                     {
-                        Log.Debug("AuthorizationStatusValue:" + Status.ToString() + "Configuration.PollingIntervalSeconds" + Configuration.PollingIntervalSeconds);
+
                         await Task.Delay(Configuration.PollingIntervalSeconds);
 
                         AuthorizationStatus P;
-                        Log.Debug("Basket:" + Basket.Message.ToString());
                         if (Basket is null)
                         {
                             P = await Client.GetPaymentInitiationAuthorizationStatus(Payments[0].Product, Payments[0].PaymentId,
                                 Authorization.AuthorizationID, Operation);
-
-                            Log.Debug("GetPaymentInitiationAuthorizationStatus:" + P.Status.ToString());
                         }
                         else
                         {
                             P = await Client.GetPaymentBasketAuthorizationStatus(Basket.BasketId,
                                 Authorization.AuthorizationID, Operation);
-
-
-                            Log.Debug("1 GetPaymentInitiationAuthorizationStatus:" + P.Status.ToString());
                         }
 
                         Status = P.Status;
                         ErrorMessages = P.Messages;
-                        Log.Debug("Status:" + Status + ErrorMessages);
+
                         if (!(P.ChallengeData is null))
                         {
-                            Log.Debug("P.ChallengeData: " + P.ChallengeData.ToString());
                             await PushQrCodeIfNecessary(TabId, Status, P.ChallengeData, FromMobildeDevice,
                                 ref PaymentCodeSent, ref CreditorAccountCodeSent, ref LastImageSent);
                         }
@@ -193,15 +181,15 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 
                     if (Basket is null)
                     {
-                        Log.Debug("1.GetPaymentInitiationStatus " );
+
                         PaymentTransactionStatus TransactionStatus = await Client.GetPaymentInitiationStatus(Payments[0].Product,
                             Payments[0].PaymentId, Operation);
                         bool IsPaid = Status == AuthorizationStatusValue.finalised &&
                             TransactionStatus.Status != PaymentStatus.RJCT &&
                             TransactionStatus.Status != PaymentStatus.CANC;
-                        Log.Debug("1.TransactionStatus " + TransactionStatus);
+
                         Payments[0].TransactionStatus = TransactionStatus.Status;
-                        Log.Debug("1.TransactionStatus.Messages " + TransactionStatus.Messages);
+
                         if (!IsPaid && !(TransactionStatus.Messages is null))
                         {
                             foreach (TppMessage Msg2 in TransactionStatus.Messages)
@@ -214,7 +202,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                         Payments[0].Updated = TP;
 
                         await Database.Update(Payments[0]);
-                        Log.Debug("ObjectId" + Payments[0].ObjectId + "TransactionStatus" + Payments[0].TransactionStatus + "IsPaid" + IsPaid);
+
                         if (PushToClients)
                         {
                             await ClientEvents.PushEvent(TabIDs, "PaymentUpdated", JSON.Encode(new Dictionary<string, object>()
@@ -229,11 +217,10 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     }
                     else
                     {
-                        Log.Debug("2.GetPaymentInitiationStatus ");
+
                         BasketTransactionStatus BasketStatus = await Client.GetPaymentBasketStatus(Basket.BasketId, Operation);
                         bool IsPaid = Status == AuthorizationStatusValue.finalised &&
                             BasketStatus.Status != PaymentBasketStatus.RJCT;
-                        Log.Debug("BasketStatus" + BasketStatus + "Status:" + Status + "IsPaid:" + IsPaid);
 
                         if (!IsPaid && !(ErrorMessages is null))
                         {
@@ -243,19 +230,16 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                             if (Message.Length == 0)
                                 Message.AppendLine("Payments were rejected.");
                         }
-                        Log.Debug("Message" + Message);
+
                         foreach (OutboundPayment Payment in Payments)
                         {
                             try
                             {
-                                Log.Debug("GetPaymentInitiationStatus" );
                                 PaymentTransactionStatus Status2 = await Client.GetPaymentInitiationStatus(Payment.Product, Payment.PaymentId, Operation);
                                 Payment.TransactionStatus = Status2.Status;
 
                                 IsPaid = Status2.Status != PaymentStatus.RJCT &&
                                     Status2.Status != PaymentStatus.CANC;
-
-                                Log.Debug("Status2.Status:" + Status2.Status);
 
                                 if (!(Status2.Messages is null))
                                 {
@@ -266,7 +250,6 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                                         Message.AppendLine(Msg2.Text);
                                     }
                                 }
-                                Log.Debug("Message: " + Message);
                             }
                             catch (Exception ex)
                             {
@@ -275,7 +258,6 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                                 Message.Append(Payment.PaymentId);
                                 Message.Append(": ");
                                 Message.AppendLine(ex.Message);
-                                Log.Debug("Message" + Message + "  :: " +ex.Message);
                             }
 
                             if (IsPaid)
@@ -289,7 +271,6 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 
                             if (PushToClients)
                             {
-                                Log.Debug("PushToClients: " + Payment.ObjectId + "  :: " + Payment.TransactionStatus + " :: " + IsPaid);
                                 await ClientEvents.PushEvent(TabIDs, "PaymentUpdated", JSON.Encode(new Dictionary<string, object>()
                                 {
                                     { "objectId", Payment.ObjectId },
@@ -303,7 +284,6 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     }
 
                     string Msg = Message.ToString().Trim();
-                    Log.Debug(Msg);
                     if (!string.IsNullOrEmpty(Msg))
                     {
                         if (PushToClients)
@@ -325,8 +305,6 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     {
                         try
                         {
-                            Log.Debug("DeletePaymentBasket: ");
-
                             await Client.DeletePaymentBasket(Basket.BasketId, Operation);
 
                             foreach (OutboundPayment Payment in Payments)
