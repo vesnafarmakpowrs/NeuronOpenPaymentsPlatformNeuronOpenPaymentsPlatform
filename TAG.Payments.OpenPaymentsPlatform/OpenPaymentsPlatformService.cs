@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
 using Waher.Content;
-using Waher.Content.Html.Elements;
 using Waher.Content.Markdown;
 using Waher.Events;
 using Waher.IoTGateway;
@@ -17,9 +16,6 @@ using Waher.Persistence.Serialization;
 using Waher.Runtime.Inventory;
 using Waher.Runtime.Settings;
 using Waher.Script;
-using Waher.Script.Functions.Vectors;
-using Waher.Security;
-using Waher.Things.DisplayableParameters;
 
 namespace TAG.Payments.OpenPaymentsPlatform
 {
@@ -325,9 +321,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 Log.Informational("RequestClientVerification started");
 
-                if (AuthenticationMethod is null || ChallengeData is null)
+                if (ChallengeData is null)
                 {
-                    throw new Exception("Authentication method or Challenge data could not be null");
+                    Log.Error("Challenge data is null...");
+                    return;
                 }
 
                 if (ClientUrlCallback != null && shouldRefreshBankIdUrl)
@@ -429,48 +426,48 @@ namespace TAG.Payments.OpenPaymentsPlatform
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
             decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
         {
-            ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
-            if (!Configuration.IsWellDefined)
-                return new PaymentResult("Service not configured properly.");
-
-            Log.Informational("OPP started");
-
-            AuthorizationFlow Flow = Configuration.AuthorizationFlow;
-
-            if (string.IsNullOrEmpty(this.buyTemplateId) || Flow == AuthorizationFlow.Redirect)
-            {
-                ContractParameters["Amount"] = Amount;
-                ContractParameters["Currency"] = Currency;
-            }
-
-            string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                Amount, Currency, out CaseInsensitiveString PersonalNumber,
-                out string BankAccount, out string TextMessage, out string TabId, out string CallBackUrl, out bool RequestFromMobilePhone);
-
-            if (!string.IsNullOrEmpty(Message))
-            {
-                await NotifyTransactionState(TransactionState.TransactionFailed, TabId, Message);
-                return new PaymentResult(Message);
-            }
-
-            Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
-            if (!string.IsNullOrEmpty(Message))
-            {
-                await NotifyTransactionState(TransactionState.TransactionFailed, TabId, Message);
-                return new PaymentResult(Message);
-            }
-
-            OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
-                ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
-
-            if (Client is null)
-            {
-                await NotifyTransactionState(TransactionState.TransactionFailed, TabId, "Service not configured properly.");
-                return new PaymentResult("Service not configured properly.");
-            }
+            string TabId = string.Empty;
+            OpenPaymentsPlatformClient Client = null;
 
             try
             {
+                ServiceConfiguration Configuration = await ServiceConfiguration.GetCurrent();
+                if (!Configuration.IsWellDefined)
+                    throw new Exception("Service not configured properly.");
+
+                Log.Informational("OPP started");
+
+                AuthorizationFlow Flow = Configuration.AuthorizationFlow;
+
+                if (string.IsNullOrEmpty(this.buyTemplateId) || Flow == AuthorizationFlow.Redirect)
+                {
+                    ContractParameters["Amount"] = Amount;
+                    ContractParameters["Currency"] = Currency;
+                }
+
+                string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
+                    Amount, Currency, out CaseInsensitiveString PersonalNumber,
+                    out string BankAccount, out string TextMessage, out TabId, out string CallBackUrl, out bool RequestFromMobilePhone);
+
+                if (!string.IsNullOrEmpty(Message))
+                {
+                    throw new Exception(Message);
+                }
+
+                Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
+                if (!string.IsNullOrEmpty(Message))
+                {
+                    throw new Exception(Message);
+                }
+
+                Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
+                   ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
+
+                if (Client is null)
+                {
+                    throw new Exception("Service not configured properly.");
+                }
+
                 string PersonalID = GetPersonalID(PersonalNumber);
                 if (mode == OperationMode.Sandbox)
                 {
@@ -533,8 +530,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (AuthenticationMethod is null)
                 {
-                    await NotifyTransactionState(TransactionState.TransactionFailed, TabId, "Unable to find a Mobile Bank ID authorization method for the operation.");
-                    return new PaymentResult("Unable to find a Mobile Bank ID authorization method for the operation.");
+                    throw new Exception("Unable to find a Mobile Bank ID authorization method for the operation.");
                 }
 
                 PaymentServiceUserDataResponse PsuDataResponse = await Client.PutPaymentInitiationUserData(
@@ -578,7 +574,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 if (!PaymentAuthorizationStarted)
                                 {
                                     PaymentAuthorizationStarted = true;
-                                    Log.Informational("AuthorizationStatusValue.started");
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
@@ -590,7 +585,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                                 if (!CreditorAuthorizationStarted)
                                 {
                                     CreditorAuthorizationStarted = true;
-                                    Log.Informational("AuthorizationStatusValue.authenticationStarted");
                                 }
 
                                 await RequestClientVerification(ClientUrlCallback,
@@ -602,9 +596,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
                 {
-                    await NotifyTransactionState(TransactionState.TransactionFailed, TabId, ErrorMessages[0].Text);
-                    return new PaymentResult(ErrorMessages[0].Text);
+                    throw new Exception(ErrorMessages[0].Text);
                 }
+
                 await NotifyTransactionState(TransactionState.TransactionInProgress, TabId);
 
                 PaymentTransactionStatus Status = await Client.GetPaymentInitiationStatus(Product, PaymentInitiationReference.PaymentId, Operation);
@@ -624,20 +618,17 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                     if (!string.IsNullOrEmpty(s))
                     {
-                        await NotifyTransactionState(TransactionState.TransactionFailed, TabId, s);
-                        return new PaymentResult(s);
+                        throw new Exception(s);
                     }
                 }
 
                 switch (Status.Status)
                 {
                     case PaymentStatus.RJCT:
-                        await NotifyTransactionState(TransactionState.TransactionFailed, TabId, "Payment was rejected.");
-                        return new PaymentResult("Payment was rejected.");
+                        throw new Exception("Payment was rejected.");
 
                     case PaymentStatus.CANC:
-                        await NotifyTransactionState(TransactionState.TransactionFailed, TabId, "Payment was rejected.");
-                        return new PaymentResult("Payment was cancelled.");
+                        throw new Exception("Payment was cancelled.");
                 }
 
                 switch (AuthorizationStatusValue)
@@ -646,19 +637,18 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         break;
 
                     case AuthorizationStatusValue.failed:
-                        await NotifyTransactionState(TransactionState.TransactionFailed, TabId, "Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
-                        return new PaymentResult("Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
+                        throw new Exception("Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
 
                     default:
-                        await NotifyTransactionState(TransactionState.TransactionFailed, TabId, "Transaction took too long to complete.");
-                        return new PaymentResult("Transaction took too long to complete.");
+                        throw new Exception("Transaction took too long to complete.");
                 }
+
                 await NotifyTransactionState(TransactionState.TransactionCompleted, TabId);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
             {
-                await NotifyTransactionState(TransactionState.TransactionCompleted, TabId, ex.Message);
+                await NotifyTransactionState(TransactionState.TransactionFailed, TabId, ex.Message);
                 return new PaymentResult(ex.Message);
             }
             finally
@@ -843,7 +833,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             if (ContractParameters.TryGetValue("Message", out Obj))
             {
                 if (!(Obj is string s))
-                    return "Message not a string. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
+                    return "Message not a string. Value: " + Waher.Script.Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
 
                 s = s.Trim();
                 if (s.Length > 10)
