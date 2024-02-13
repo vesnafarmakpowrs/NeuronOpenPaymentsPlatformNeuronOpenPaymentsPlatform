@@ -44,11 +44,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private static readonly Dictionary<string, string> buyTemplateIdsSandbox = new Dictionary<string, string>()
         {
-            { "ELLFSESS", "2d292985-40d0-6fe9-a416-c213c0b31485@legal.lab.neuron.vaulter.nu" },
-            { "ESSESESS", "2d2929b1-40d0-6ff5-a416-c213c018c687@legal.lab.neuron.vaulter.nu" },
-            { "HANDSESS", "2d2929d6-40d0-6ffa-a416-c213c0953d08@legal.lab.neuron.vaulter.nu" },
-            { "NDEASESS", "2d2929f2-40d0-6ffc-a416-c213c02a69f6@legal.lab.neuron.vaulter.nu" },
-            { "SWEDSESS", "2d292a0a-40d0-7006-a416-c213c0e19d01@legal.lab.neuron.vaulter.nu" },
+            { "ELLFSESS", "2d5ddde1-5695-03b9-101a-54cb2fe14cfa@legal.lab.se.neuron.vaulter.nu" },
+            { "ESSESESS", "2d5dddf7-5695-03bb-101a-54cb2f5c8a64@legal.lab.se.neuron.vaulter.nu" },
+            { "HANDSESS", "2d5dde07-5695-03bf-101a-54cb2fbedbce@legal.lab.se.neuron.vaulter.nu" },
+            { "NDEASESS", "2d5dde1d-5695-03c1-101a-54cb2f5ff536@legal.lab.se.neuron.vaulter.nu" },
+            { "SWEDSESS", "2d5dde2b-5695-03c3-101a-54cb2f6e4253@legal.lab.se.neuron.vaulter.nu" },
             { "NDEAFIHH", string.Empty },
             { "DABASESX", string.Empty },
             { "DNBANOKK", string.Empty },
