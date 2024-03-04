@@ -915,6 +915,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
             try
             {
                 string PersonalID = GetPersonalID(PersonalNumber);
+                
+                if (mode == OperationMode.Sandbox)
+                {
+                    PersonalID = "";
+                }
 
                 OperationInformation Operation = new OperationInformation(
                     ClientIpAddress,
