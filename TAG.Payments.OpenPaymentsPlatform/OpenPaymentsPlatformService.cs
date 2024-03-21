@@ -1465,7 +1465,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     };
 
                     await InternetContent.PostAsync(
-                        new Uri("https://" + Gateway.Domain + "/OpenPaymentsPlatform/NotifyOutboundPayment.ws"),
+                        new Uri(Gateway.GetUrl("/OpenPaymentsPlatform/NotifyOutboundPayment.ws")),
                         body, Gateway.Certificate, new KeyValuePair<string, string>("Accept", "application/json"));
                 }
                 catch (Exception ex)
