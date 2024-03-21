@@ -1453,7 +1453,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             }
         }
 
-        public static void SendNotificationEmail(string markdown)
+        private void SendNotificationEmail(string markdown)
         {
             Task.Run(async () =>
             {
