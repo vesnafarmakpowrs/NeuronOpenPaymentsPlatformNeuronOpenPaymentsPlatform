@@ -9,6 +9,7 @@
 			<Content fileName="Settings.js"/>
 			<Content fileName="Settings.md"/>
 			<Content fileName="Sniffer.md"/>
+			<Content fileName="NotifyOutboundPayment.ws"/>
 		</Folder>
 	</Folder>
 </Module>

@@ -14,7 +14,6 @@ using Waher.Persistence;
 using Waher.Persistence.Filters;
 using Waher.Persistence.Serialization;
 using Waher.Runtime.Inventory;
-using Waher.Runtime.Settings;
 using Waher.Script;
 
 namespace TAG.Payments.OpenPaymentsPlatform
@@ -915,7 +914,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
             try
             {
                 string PersonalID = GetPersonalID(PersonalNumber);
-                
+
                 if (mode == OperationMode.Sandbox)
                 {
                     PersonalID = "";
@@ -1440,24 +1439,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Log.Critical(ex);
                 }
 
-                string NotificationList = await RuntimeSettings.GetAsync("TAG.Payments.OpenPaymentsPlatform.NotificationList", string.Empty);
-                string[] Recipients = NotificationList.Split(';');
-
-                foreach (string Recipient in Recipients)
-                {
-                    string Addr = Recipient.Trim();
-                    if (string.IsNullOrEmpty(Addr))
-                        continue;
-
-                    try
-                    {
-                        await Gateway.SendChatMessage(Markdown.ToString(), Addr);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Critical(ex);
-                    }
-                }
+                SendNotificationEmail(MarkdownMessage);
 
                 return new PaymentResult(Amount, Currency);
             }
@@ -1469,6 +1451,28 @@ namespace TAG.Payments.OpenPaymentsPlatform
             {
                 OpenPaymentsPlatformServiceProvider.Dispose(Client, this.mode);
             }
+        }
+
+        public static void SendNotificationEmail(string markdown)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var body = new Dictionary<string, object>
+                    {
+                        { "markdown", markdown }
+                    };
+
+                    await InternetContent.PostAsync(
+                        new Uri("https://" + Gateway.Domain + "/OpenPaymentsPlatform/NotifyOutboundPayment.ws"),
+                        body, Gateway.Certificate, new KeyValuePair<string, string>("Accept", "application/json"));
+                }
+                catch (Exception ex)
+                {
+                    Log.Critical(ex.Message);
+                }
+            });
         }
 
         private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
