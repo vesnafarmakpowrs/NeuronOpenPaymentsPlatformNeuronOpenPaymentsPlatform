@@ -4,8 +4,6 @@
     "markdown":Required(Str(PMarkdown))
 }:=Posted) ??? BadRequest(Exception.Message);
 
-try
-(
 recepientString:= GetSetting("TAG.Payments.OpenPaymentsPlatform.NotificationList", "");
 if(System.String.IsNullOrEmpty(recepientString)) then 
 (
@@ -20,11 +18,15 @@ if(recepients.Length == 0) then
 
 foreach (recepient in recepients) do 
 (
+  try
+  (
     XmppServerModule.SendMailMessage(recepient, "Outbound payments for signature", PMarkdown);
+  )
+  catch
+  (
+    Log.Error("Unable to send outbound payment to: " + recepient + ". " + Exception.Message, null);
+  );
 );
 
-)
-catch
-(
-    Log.Error("Unable to send outbounts payments: " + Exception.Message, null);
-);
+{
+}
