@@ -221,25 +221,17 @@ function OpenUrl(Url)
 	Window.focus();
 }
 
-function ShowQRCode(Data)
-{
+function ShowQRCode(Data) {
 	var Div = document.getElementById("QrCode");
 
-	if (Data.urlIsImage)
-	{
-		Div.innerHTML = "<fieldset><legend>" + Data.title + "</legend><p>" + Data.message +
-			"</p><p><img alt='Bank ID QR Code' src='" + Data.url + "'/></p></fieldset>";
+	if (Data.ImageUrl) {
+		Div.innerHTML = "<fieldset><legend>" + Translations.QrCodeScanTitle + "</legend><p>" + Translations.QrCodeScanMessage +
+			"</p><p><img class='QrCodeImage' alt='Bank ID QR Code' src='" + Data.ImageUrl + "'/></p></fieldset>";
 	}
-	else if (Data.fromMobileDevice)
-	{
-		Div.innerHTML = "Opening authorization link.";
-		OpenUrl(Data.url);
-	}
-	else
-	{
-		Div.innerHTML = "<fieldset><legend>" + Data.title + "</legend><p>" + Data.message +
-			"</p><p>" + "<a href='" + Data.url + "'><img alt='Bank ID QR Code' src='/QR/" +
-			encodeURIComponent(Data.url) + "'/></a></p></fieldset>";
+	else if (Data.AutoStartToken) {
+		Div.innerHTML = "<fieldset><legend>" + Translations.QrCodeScanTitle + "</legend><p>" + Translations.QrCodeScanMessage +
+			"</p><p>" + "<a href='" + Data.AutoStartToken + "'><img alt='Bank ID QR Code' src='/QR/" +
+			encodeURIComponent(Data.AutoStartToken) + "'/></a></p></fieldset>";
 	}
 }
 

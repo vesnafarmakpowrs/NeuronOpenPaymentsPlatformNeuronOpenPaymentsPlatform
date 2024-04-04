@@ -220,8 +220,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 
                         BasketTransactionStatus BasketStatus = await Client.GetPaymentBasketStatus(Basket.BasketId, Operation);
                         bool IsPaid = Status == AuthorizationStatusValue.finalised &&
-                            BasketStatus.Status != PaymentBasketStatus.RJCT;
-
+                            BasketStatus.Status == PaymentBasketStatus.RJCT;
+                        Log.Informational("PaymentBasketStatus:" + BasketStatus.Status);
                         if (!IsPaid && !(ErrorMessages is null))
                         {
                             foreach (TppMessage Msg2 in ErrorMessages)
@@ -365,9 +365,10 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     return ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                         JSON.Encode(new Dictionary<string, object>()
                         {
-                            { "url", Url },
-                            { "urlIsImage", UrlIsImage },
-                            { "fromMobileDevice", FromMobileDevice },
+                            { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
+                            { "MobileAppUrl", OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
+                            { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                            { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
                             { "title", "Authorize payment" },
                             { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
                         }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
@@ -381,9 +382,10 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     return ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
                         JSON.Encode(new Dictionary<string, object>()
                         {
-                            { "url", Url },
-                            { "urlIsImage", UrlIsImage },
-                            { "fromMobileDevice", FromMobileDevice },
+                            { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
+                            { "MobileAppUrl", OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
+                            { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                            { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
                             { "title", "Authorize recipient" },
                             { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
                         }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");

@@ -849,7 +849,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// </summary>
         /// <param name="RedirectUrl">URL to redirect to.</param>
         /// <returns>URL for starting a BankID app on a desktop.</returns>
-        public string GetMobileAppUrl(string RedirectUrl, string AutoStartToken)
+        public static string GetMobileAppUrl(string RedirectUrl, string AutoStartToken)
         {
             if (string.IsNullOrEmpty(AutoStartToken))
             {
