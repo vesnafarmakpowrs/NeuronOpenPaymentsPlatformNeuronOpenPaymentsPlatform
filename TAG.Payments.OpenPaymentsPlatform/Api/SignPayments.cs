@@ -59,7 +59,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                 string[] PaymentIds,
                 string TabId,
                 string Password,
-                IUser User
+                IUser User,
+                bool RequestFromMobilePhone
             ) = await PrepareRequest(Request, this.ResourceName, true);
 
             string UserAgent = Request.Header.UserAgent?.Value.ToLower() ?? string.Empty;
@@ -113,19 +114,22 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                         Authorization = await Client.StartPaymentInitiationAuthorization(Payments[0].Product,
                             Payments[0].PaymentId, Operation);
 
-                        if (FromMobildeDevice)
+                        if (RequestFromMobilePhone)
                         {
                             Method = Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
-                                ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID)
-                                ?? throw new ServiceUnavailableException("Unable to find a Mobile Bank ID authorization method for the operation.");
+                                ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID);
                         }
                         else
                         {
                             Method = Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN)
-                                    ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE)
-                                    ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID)
-                                    ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
-                                    ?? throw new ServiceUnavailableException("Unable to find a Mobile Bank ID authorization method for the operation.");
+                                ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE)
+                                ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID)
+                                ?? Authorization.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE);
+                        }
+
+                        if (Method is null)
+                        {
+                            throw new Exception("Unable to find a Mobile Bank ID authorization method for the operation.");
                         }
 
                         PsuDataResponse = await Client.PutPaymentInitiationUserData(Payments[0].Product, Payments[0].PaymentId,
@@ -138,7 +142,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     bool PaymentCodeSent = false;
                     bool CreditorAccountCodeSent = false;
 
-                    await PushQrCodeIfNecessary(TabId, PsuDataResponse.Status, PsuDataResponse.ChallengeData, FromMobildeDevice,
+                    await PushQrCodeIfNecessary(Method,TabId, PsuDataResponse.Status, PsuDataResponse.ChallengeData, FromMobildeDevice,
                         ref PaymentCodeSent, ref CreditorAccountCodeSent, ref LastImageSent);
 
                     TppMessage[] ErrorMessages = PsuDataResponse.Messages;
@@ -151,7 +155,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                     {
 
                         await Task.Delay(Configuration.PollingIntervalSeconds);
-
+                        Log.Informational("Status" + Status);
                         AuthorizationStatus P;
                         if (Basket is null)
                         {
@@ -167,9 +171,9 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                         Status = P.Status;
                         ErrorMessages = P.Messages;
 
-                        if (!(P.ChallengeData is null))
+                        if (P.ChallengeData is not null)
                         {
-                            await PushQrCodeIfNecessary(TabId, Status, P.ChallengeData, FromMobildeDevice,
+                            await PushQrCodeIfNecessary(Method,TabId, Status, P.ChallengeData, RequestFromMobilePhone,
                                 ref PaymentCodeSent, ref CreditorAccountCodeSent, ref LastImageSent);
                         }
                     }
@@ -325,7 +329,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
             });
         }
 
-        private static Task PushQrCodeIfNecessary(string TabId, AuthorizationStatusValue Status,
+        private  static Task PushQrCodeIfNecessary(AuthenticationMethod Method,string TabId, AuthorizationStatusValue Status,
             ChallengeData ChallengeData, bool FromMobileDevice, ref bool PaymentCodeSent, ref bool CreditorAccountCodeSent,
             ref string LastImageUrl)
         {
@@ -361,41 +365,20 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                         break;
 
                     PaymentCodeSent = true;
-
-                    return ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
-                        JSON.Encode(new Dictionary<string, object>()
-                        {
-                            { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
-                            { "MobileAppUrl", OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
-                            { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
-                            { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
-                            { "title", "Authorize payment" },
-                            { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                        }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
-
+                    return BankIdCodeOrApp(Method, TabId, ChallengeData);
                 case AuthorizationStatusValue.authoriseCreditorAccountStarted:
                     if (CreditorAccountCodeSent && !UrlIsImage)
                         break;
 
                     CreditorAccountCodeSent = true;
-
-                    return ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode",
-                        JSON.Encode(new Dictionary<string, object>()
-                        {
-                            { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
-                            { "MobileAppUrl", OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
-                            { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
-                            { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
-                            { "title", "Authorize recipient" },
-                            { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                        }, false), true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+                    return BankIdCodeOrApp(Method, TabId, ChallengeData);
             }
 
             return Task.CompletedTask;
         }
 
-        internal static async Task<(ServiceConfiguration, OperationInformation, OpenPaymentsPlatformClient, OutboundPayment[], string[], string, string, IUser)>
-            PrepareRequest(HttpRequest Request, string ResourceName, bool OutboundPayment)
+        internal static async Task<(ServiceConfiguration, OperationInformation, OpenPaymentsPlatformClient, OutboundPayment[], string[], string, string, IUser, bool)>
+    PrepareRequest(HttpRequest Request, string ResourceName, bool OutboundPayment)
         {
             IUser User = null;
 
@@ -415,6 +398,9 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 
             if (!Query.TryGetValue("tabId", out Obj) || !(Obj is string TabId))
                 throw new BadRequestException("Tab ID not in request.");
+
+            if (!Query.TryGetValue("requestFromMobilePhone", out Obj) || !(Obj is bool RequestFromMobilePhone))
+                throw new BadRequestException("requestFromMobilePhone not in request.");
 
             if (!Query.TryGetValue("password", out Obj) || !(Obj is string Password))
                 Password = string.Empty;
@@ -457,7 +443,50 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration)
                 ?? throw new TemporaryRedirectException("Settings.md");
 
-            return (Configuration, Operation, Client, Payments.ToArray(), PaymentIds.ToArray(), TabId, Password, User);
+            return (Configuration, Operation, Client, Payments.ToArray(), PaymentIds.ToArray(), TabId, Password, User, RequestFromMobilePhone);
+        }
+
+        private static Task BankIdCodeOrApp(AuthenticationMethod AuthenticationMethod, string TabId, ChallengeData ChallengeData)
+        {
+            switch (AuthenticationMethod.MethodId)
+            {
+                case AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN:
+                case AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE:
+                    return RefreshQrCode(TabId, ChallengeData);
+
+                case AuthenticationMethodId.MBID:
+                case AuthenticationMethodId.MBID_SAME_DEVICE:
+                    return RequestOpenBankIdApp(TabId, ChallengeData);
+            }
+            return Task.CompletedTask;
+        }
+
+        private static Task RequestOpenBankIdApp(string TabId, ChallengeData ChallengeData)
+        {
+            string eventMessage = JSON.Encode(new Dictionary<string, object>()
+                            {
+                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
+                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                                { "MobileAppUrl",  OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)}
+                            }, false);
+
+            Log.Informational(eventMessage);
+           return ClientEvents.PushEvent(new string[] { TabId }, "OpenBankIdApp", eventMessage, true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
+        }
+
+        private static Task RefreshQrCode(string TabId, ChallengeData ChallengeData)
+        {
+            string eventMessage = JSON.Encode(new Dictionary<string, object>()
+                            { { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
+                            { "MobileAppUrl", OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
+                            { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
+                            { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
+                            { "title", "Authorize payment" },
+                            { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
+                        }, false);
+
+            Log.Informational(eventMessage);
+            return ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode", eventMessage, true, "User", "Admin.Payments.Paiwise.OpenPaymentsPlatform");
         }
 
     }

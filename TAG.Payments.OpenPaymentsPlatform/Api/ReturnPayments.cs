@@ -59,8 +59,9 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 				string[] PaymentIds,
 				string TabId,
 				string Password,
-				IUser User
-			) = await SignPayments.PrepareRequest(Request, this.ResourceName, false);
+				IUser User,
+                bool RequestFromMobilePhone
+            ) = await SignPayments.PrepareRequest(Request, this.ResourceName, false);
 
 			Task _ = Task.Run(async () =>
 			{

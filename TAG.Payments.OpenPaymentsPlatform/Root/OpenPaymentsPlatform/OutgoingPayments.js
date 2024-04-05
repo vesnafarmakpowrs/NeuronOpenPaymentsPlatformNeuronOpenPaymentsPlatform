@@ -1,3 +1,4 @@
+const isMobileDevice = window.navigator.userAgent.toLowerCase().includes("mobi");
 function SelectAll()
 {
 	SetCheck(true, 1e9);
@@ -115,7 +116,8 @@ function ProcessSelected(CommandResource, Password)
 	var Request =
 	{
 		"objectIds": ObjectIds,
-		"tabId": TabID
+		"tabId": TabID,
+		"requestFromMobilePhone": Boolean(isMobileDevice)
 	};
 
 	if (Password)
@@ -225,15 +227,38 @@ function ShowQRCode(Data) {
 	var Div = document.getElementById("QrCode");
 
 	if (Data.ImageUrl) {
-		Div.innerHTML = "<fieldset><legend>" + Translations.QrCodeScanTitle + "</legend><p>" + Translations.QrCodeScanMessage +
+		Div.innerHTML = "<fieldset><legend>" + Data.title + "</legend><p>" + Data.message +
 			"</p><p><img class='QrCodeImage' alt='Bank ID QR Code' src='" + Data.ImageUrl + "'/></p></fieldset>";
 	}
 	else if (Data.AutoStartToken) {
-		Div.innerHTML = "<fieldset><legend>" + Translations.QrCodeScanTitle + "</legend><p>" + Translations.QrCodeScanMessage +
+		Div.innerHTML = "<fieldset><legend>" + Data.title + "</legend><p>" + Data.message +
 			"</p><p>" + "<a href='" + Data.AutoStartToken + "'><img alt='Bank ID QR Code' src='/QR/" +
 			encodeURIComponent(Data.AutoStartToken) + "'/></a></p></fieldset>";
 	}
 }
+
+
+function OpenBankIdApp(Data) {
+	if (Data == null) {
+		console.log("data is empty");
+		return;
+	}
+
+	var link = Data.BankIdUrl;
+	var mode = "_blank";
+	var isIos = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+	if (isIos) {
+		link = Data.MobileAppUrl;
+		mode = "_self";
+		let chromeAgent = navigator.userAgent.indexOf("Chrome") > -1;
+		if (!chromeAgent) {
+			link = link.replace('redirect=null', 'redirect=');
+		}
+	}
+	window.open(link, mode);
+}
+
 
 function PaymentError(Data)
 {
