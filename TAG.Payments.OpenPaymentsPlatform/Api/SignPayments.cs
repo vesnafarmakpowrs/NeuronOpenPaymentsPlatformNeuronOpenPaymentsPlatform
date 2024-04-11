@@ -225,7 +225,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 
                         BasketTransactionStatus BasketStatus = await Client.GetPaymentBasketStatus(Basket.BasketId, Operation);
                         bool IsPaid = Status == AuthorizationStatusValue.finalised &&
-                            BasketStatus.Status == PaymentBasketStatus.RJCT;
+                            BasketStatus.Status != PaymentBasketStatus.RJCT;
                         Log.Informational("PaymentBasketStatus:" + BasketStatus.Status);
                         if (!IsPaid && !(ErrorMessages is null))
                         {
