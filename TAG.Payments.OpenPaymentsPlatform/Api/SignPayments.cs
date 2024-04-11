@@ -190,7 +190,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                             Payments[0].PaymentId, Operation);
                         bool IsPaid = Status == AuthorizationStatusValue.finalised &&
                             TransactionStatus.Status != PaymentStatus.RJCT &&
-                            TransactionStatus.Status != PaymentStatus.CANC;
+                            TransactionStatus.Status != PaymentStatus.CANC && 
+                            TransactionStatus.Status != PaymentStatus.ACTC;
 
                         Payments[0].TransactionStatus = TransactionStatus.Status;
 
@@ -243,7 +244,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                                 Payment.TransactionStatus = Status2.Status;
 
                                 IsPaid = Status2.Status != PaymentStatus.RJCT &&
-                                    Status2.Status != PaymentStatus.CANC;
+                                    Status2.Status != PaymentStatus.CANC &&
+                                    Status2.Status != PaymentStatus.ACTC;
 
                                 if (!(Status2.Messages is null))
                                 {
