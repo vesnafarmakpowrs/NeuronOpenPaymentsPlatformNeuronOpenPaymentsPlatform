@@ -70,7 +70,7 @@ namespace TAG.Networking.OpenPaymentsPlatform.Test
 				await GetIPAddress(),
 				typeof(AccountTests).Assembly.FullName ?? "Test Anchor Group Unit Test",
 				Flow,
-				await GetPersonalNumber1(),
+				//await GetPersonalNumber1(),
 				null,
 				await GetServiceProvider1());
 		}

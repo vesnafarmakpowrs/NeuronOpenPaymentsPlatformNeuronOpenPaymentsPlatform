@@ -149,7 +149,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     this.NeuronBankAccountIban.Length > 2 &&
                     !string.IsNullOrEmpty(this.NeuronBankAccountName) &&
                     !string.IsNullOrEmpty(this.NeuronBankBic) &&
-                    !string.IsNullOrEmpty(this.PersonalID) &&
+                   // !string.IsNullOrEmpty(this.PersonalID) &&
                     (!(this.Certificate is null) || this.OperationMode == OperationMode.Sandbox) &&
                     this.PollingIntervalSeconds > 0 &&
                     this.TimeoutMinutes > 0;

@@ -20,13 +20,16 @@ namespace TAG.Networking.OpenPaymentsPlatform
 		/// <param name="OrganizationID">Optional ID of organization owning the debtor account.</param>
 		/// <param name="DebtorBank">Bank code (BIC) of bank or financial institution of the debtor (that payment is made from).</param>
 		public OperationInformation(IPAddress UserIpAddress, string UserAgent, 
-			AuthorizationFlow Flow, string PersonalID, string OrganizationID, string DebtorBank)
+			AuthorizationFlow Flow,
+			//string PersonalID,
+			string OrganizationID,
+			string DebtorBank)
 		{
 			this.UserIpAddress = UserIpAddress;
 			this.UserAgent = UserAgent;
 			this.ServiceProvider = DebtorBank;
 			this.Flow = Flow;
-			this.PersonalID = PersonalID;
+			//this.PersonalID = PersonalID;
 			this.OrganizationID = OrganizationID;
 
 			List<KeyValuePair<string, string>> Headers = new List<KeyValuePair<string, string>>()
@@ -37,8 +40,8 @@ namespace TAG.Networking.OpenPaymentsPlatform
 				new KeyValuePair<string, string>("TPP-Redirect-Preferred", CommonTypes.Encode(this.Flow == AuthorizationFlow.Redirect))
 			};
 
-			if (!string.IsNullOrEmpty(this.PersonalID))
-				Headers.Add(new KeyValuePair<string, string>("PSU-ID", this.PersonalID));
+			//if (!string.IsNullOrEmpty(this.PersonalID))
+			//	Headers.Add(new KeyValuePair<string, string>("PSU-ID", this.PersonalID));
 
 			if (!string.IsNullOrEmpty(this.OrganizationID))
 				Headers.Add(new KeyValuePair<string, string>("PSU-Corporate-ID", this.OrganizationID));
@@ -69,7 +72,7 @@ namespace TAG.Networking.OpenPaymentsPlatform
 		/// <summary>
 		/// Personal ID (or number)
 		/// </summary>
-		public string PersonalID { get; }
+		//public string PersonalID { get; }
 
 		/// <summary>
 		/// Organization ID (or number)

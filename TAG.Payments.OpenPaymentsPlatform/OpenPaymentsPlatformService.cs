@@ -445,7 +445,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 }
 
                 string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                    Amount, Currency, out CaseInsensitiveString PersonalNumber,
+                    Amount, Currency, 
+                    //out CaseInsensitiveString PersonalNumber,
                     out string BankAccount, out string TextMessage, out TabId, out string CallBackUrl, out bool RequestFromMobilePhone);
 
                 if (!string.IsNullOrEmpty(Message))
@@ -467,11 +468,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     throw new Exception("Service not configured properly.");
                 }
 
-                string PersonalID = GetPersonalID(PersonalNumber);
-                if (mode == OperationMode.Sandbox)
-                {
-                    PersonalID = "";
-                }
+                //string PersonalID = GetPersonalID(PersonalNumber);
+                //if (mode == OperationMode.Sandbox)
+                //{
+                //    PersonalID = "";
+                //}
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
                 if (!(P.Value is null))
@@ -483,7 +484,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     ClientIpAddress,
                     typeof(OpenPaymentsPlatformServiceProvider).Assembly.FullName,
                     Flow,
-                    PersonalID,
+                    //PersonalID,
                     null,
                     this.service.BicFi);
 
@@ -748,10 +749,11 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
+            decimal Amount, string Currency,
+            //, out CaseInsensitiveString PersonalNumber,
             out string BankAccount, out string TextMessage, out string TabId, out string CallBackUrl, out bool RequestFromMobilePhone)
         {
-            PersonalNumber = null;
+           // PersonalNumber = null;
             TextMessage = string.Empty;
             BankAccount = string.Empty;
             TabId = null;
@@ -811,23 +813,23 @@ namespace TAG.Payments.OpenPaymentsPlatform
             BankAccount = ContractAccount;
 
             //User for payment link.
-            if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject) &&
-                PersonalNumberObject is string PersonalNumberString &&
-                !string.IsNullOrEmpty(PersonalNumberString))
-            {
-                PersonalNumber = PersonalNumberString;
-            }
-            else
-            {
-                IdentityProperties.TryGetValue("PNR", out PersonalNumber);
-            }
+            //if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject) &&
+            //    PersonalNumberObject is string PersonalNumberString &&
+            //    !string.IsNullOrEmpty(PersonalNumberString))
+            //{
+            //    PersonalNumber = PersonalNumberString;
+            //}
+            //else
+            //{
+            //    IdentityProperties.TryGetValue("PNR", out PersonalNumber);
+            //}
 
-            if (string.IsNullOrEmpty(PersonalNumber))
-            {
-                return "Personal number missing in identity or contract parameters.";
-            }
+            //if (string.IsNullOrEmpty(PersonalNumber))
+            //{
+            //    return "Personal number missing in identity or contract parameters.";
+            //}
 
-            Log.Informational("Personal number to authorize: " + PersonalNumber);
+            //Log.Informational("Personal number to authorize: " + PersonalNumber);
 
             if (ContractParameters.TryGetValue("Message", out Obj))
             {
@@ -898,10 +900,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
             if (!string.IsNullOrEmpty(Message))
                 return new IDictionary<CaseInsensitiveString, object>[0];
 
-            if (!(IdentityProperties.TryGetValue("PNR", out CaseInsensitiveString PersonalNumber)))
-                return new IDictionary<CaseInsensitiveString, object>[0];
+            //if (!(IdentityProperties.TryGetValue("PNR", out CaseInsensitiveString PersonalNumber)))
+            //    return new IDictionary<CaseInsensitiveString, object>[0];
 
-            Log.Informational("Account" + Account + "PersonalNumber" + PersonalNumber);
+            //Log.Informational("Account" + Account + "PersonalNumber" + PersonalNumber);
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode,
                 ServicePurpose.Private);    // TODO: Contracts for corporate accounts (when using corporate IDs).
@@ -913,18 +915,18 @@ namespace TAG.Payments.OpenPaymentsPlatform
             Log.Informational("Client created ");
             try
             {
-                string PersonalID = GetPersonalID(PersonalNumber);
+                //string PersonalID = GetPersonalID(PersonalNumber);
 
-                if (mode == OperationMode.Sandbox)
-                {
-                    PersonalID = "";
-                }
+                //if (mode == OperationMode.Sandbox)
+                //{
+                //    PersonalID = "";
+                //}
 
                 OperationInformation Operation = new OperationInformation(
                     ClientIpAddress,
                     typeof(OpenPaymentsPlatformServiceProvider).Assembly.FullName,
                     Flow,
-                    PersonalID,
+                  //  PersonalID,
                     null,
                     this.service.BicFi);
 
@@ -1123,7 +1125,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
             try
             {
-                string PersonalID = GetPersonalID(PersonalNumber);
+                //string PersonalID = GetPersonalID(PersonalNumber);
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
                 if (!(P.Value is null))
@@ -1135,7 +1137,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     ClientIpAddress,
                     typeof(OpenPaymentsPlatformServiceProvider).Assembly.FullName,
                     Flow,
-                    PersonalID,
+                   // PersonalID,
                     null,
                     this.service.BicFi);
 
@@ -1316,7 +1318,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
             }
 
             string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                  Amount, Currency, out CaseInsensitiveString _,
+                  Amount, Currency, 
+                  //out CaseInsensitiveString _,
                   out string BankAccount, out string AccountName, out string TextMessage);
 
             if (!string.IsNullOrEmpty(Message))
@@ -1335,7 +1338,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 return new PaymentResult("Service not configured properly.");
             try
             {
-                string PersonalID = mode != OperationMode.Sandbox ? GetPersonalID(Configuration.PersonalID) : string.Empty;
+                //string PersonalID = mode != OperationMode.Sandbox ? GetPersonalID(Configuration.PersonalID) : string.Empty;
                 string OrganizationID = GetPersonalID(Configuration.OrganizationID);
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
@@ -1348,7 +1351,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     ClientIpAddress,
                     typeof(OpenPaymentsPlatformServiceProvider).Assembly.FullName,
                     Flow,
-                    PersonalID,
+                    //PersonalID,
                     OrganizationID,
                     Configuration.NeuronBankBic);
 
@@ -1477,12 +1480,14 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
         private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
             IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
+            decimal Amount, string Currency,
+            // out CaseInsensitiveString PersonalNumber,
             out string BankAccount, out string AccountName, out string TextMessage)
         {
 
             AccountName = null;
-            string Msg = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency, out PersonalNumber,
+            string Msg = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency,
+                //out PersonalNumber,
                 out BankAccount, out TextMessage, out _, out _, out _);
 
             if (!string.IsNullOrEmpty(Msg))

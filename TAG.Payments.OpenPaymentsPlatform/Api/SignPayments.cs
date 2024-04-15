@@ -440,7 +440,9 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
 
             ServiceConfiguration Configuration = await ServiceConfiguration.Load();
             OperationInformation Operation = new OperationInformation(ClientIpAddress, UserAgent,
-                AuthorizationFlow.Decoupled, Configuration.PersonalID, Configuration.OrganizationID,
+                AuthorizationFlow.Decoupled, 
+                //Configuration.PersonalID,
+                Configuration.OrganizationID,
                 OutboundPayment ? Configuration.NeuronBankBic : Payments[0].FromBank);
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration)
                 ?? throw new TemporaryRedirectException("Settings.md");
