@@ -45,14 +45,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Paiwise" Version="1.4.1" />
-	  <PackageReference Include="Waher.Events" Version="1.1.3" />
-	  <PackageReference Include="Waher.IoTGateway" Version="1.9.0" />
-	  <PackageReference Include="Waher.Networking" Version="2.2.5" />
-	  <PackageReference Include="Waher.Networking.HTTP" Version="2.7.0" />
+    <PackageReference Include="Paiwise" Version="1.5.0" />
+	  <PackageReference Include="Waher.Events" Version="1.2.0" />
+	  <PackageReference Include="Waher.IoTGateway" Version="2.0.0" />
+	  <PackageReference Include="Waher.Networking" Version="2.2.7" />
+	  <PackageReference Include="Waher.Networking.HTTP" Version="2.8.1" />
     <PackageReference Include="Waher.Runtime.Inventory" Version="1.1.5" />
-    <PackageReference Include="Waher.Runtime.Settings" Version="1.0.10" />
-    <PackageReference Include="Waher.Script" Version="2.6.7" />
+    <PackageReference Include="Waher.Runtime.Settings" Version="1.1.1" />
+    <PackageReference Include="Waher.Script" Version="2.6.9" />
 	  
   </ItemGroup>
 
@@ -65,9 +65,9 @@
 		<ApplicationManifest>TAG.Payments.OpenPaymentsPlatform.manifest</ApplicationManifest>
 	</PropertyGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	<!--<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="&quot;C:\Program Files (x86)\Waher Data AB\IoT Gateway 1.0\Waher.Utility.Install.exe&quot; -p &quot;C:\Projects\Powrs.OpenPaymentPlatform\TAG.Payments.OpenPaymentsPlatform\bin\Release\net6.0\POWRS.OpenPaymentsPlatform.package&quot; -k  63ceeedf7c38f0e0b8a8376f7b0cca03 -m &quot;C:\Projects\Powrs.OpenPaymentPlatform\TAG.Payments.OpenPaymentsPlatform\bin\Release\net6.0\TAG.Payments.OpenPaymentsPlatform.manifest&quot;" />
 		<Exec Command="&quot;C:\Program Files (x86)\Waher Data AB\IoT Gateway 1.0\Waher.Utility.Sign.exe&quot; -c ed448 -priv &quot;TvV5rGJh02d6Dxbpc8kyhwekS+AHff5j0Qz1OLyQUKEY0+bvQfclU9nCm5bKxTBUzFJnrhUxUCY=&quot; -o &quot;C:\Projects\Powrs.OpenPaymentPlatform\TAG.Payments.OpenPaymentsPlatform\bin\Release\net6.0\POWRS.OpenPaymentsPlatform.signature&quot; -s &quot;C:\Projects\Powrs.OpenPaymentPlatform\TAG.Payments.OpenPaymentsPlatform\bin\Release\net6.0\POWRS.OpenPaymentsPlatform.package&quot;" />
-	</Target>
+	</Target>-->
 
 </Project>
