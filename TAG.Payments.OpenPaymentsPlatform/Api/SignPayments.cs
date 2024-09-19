@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
+using TAG.Payments.OpenPaymentsPlatform.Service;
 using Waher.Content;
 using Waher.Content.Html.Elements;
 using Waher.Events;
@@ -469,7 +470,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
                             {
                                 { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
                                 { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
-                                { "MobileAppUrl",  OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)}
+                                { "MobileAppUrl",  Payment.GetMobileAppUrl(null, ChallengeData.AutoStartToken)}
                             }, false);
 
             Log.Informational(eventMessage);
@@ -480,7 +481,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Api
         {
             string eventMessage = JSON.Encode(new Dictionary<string, object>()
                             { { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
-                            { "MobileAppUrl", OpenPaymentsPlatformService.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
+                            { "MobileAppUrl", Payment.GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
                             { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
                             { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
                             { "title", "Authorize payment" },
