@@ -54,11 +54,10 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             (string Id, AuthenticationMethod authenticationMethod, AuthorizationInformation AuthorizationInformation) = await StartPaymentAndChoseAuthenticationMethod(validationResult, amount, currency);
             var psuDataResponse = await PutUserData(Id, AuthorizationInformation.AuthorizationID, authenticationMethod.MethodId);
 
-            await RequestClientVerification(psuDataResponse.ChallengeData, psuDataResponse.Links?.ScaOAuth, validationResult.TabId, authenticationMethod);
-
             TppMessage[] TppMessages = psuDataResponse.Messages;
-
             EnsureNoErrorMessages(TppMessages);
+
+            await RequestClientVerification(psuDataResponse.ChallengeData, psuDataResponse.Links?.ScaOAuth, validationResult.TabId, authenticationMethod);
 
             AuthorizationStatusValue AuthorizationStatusValue = psuDataResponse.Status;
             DateTime Start = DateTime.Now;
@@ -66,6 +65,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
                         AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
             bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
+
+            Log.Informational("started AuthorizationStatusValue: " + AuthorizationStatusValue);
 
             while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
                     AuthorizationStatusValue != AuthorizationStatusValue.failed &&
@@ -83,23 +84,16 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                     continue;
                 }
 
-                if (AuthorizationStatusValue == AuthorizationStatusValue.started || AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
+                if (AuthorizationStatusValue == AuthorizationStatusValue.started ||
+                    AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
                 {
-                    if (!PaymentAuthorizationStarted)
-                    {
-                        PaymentAuthorizationStarted = true;
-                    }
-
                     await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
+                    PaymentAuthorizationStarted = true;
                 }
                 else if (AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted)
                 {
-                    if (!CreditorAuthorizationStarted)
-                    {
-                        CreditorAuthorizationStarted = true;
-                    }
-
                     await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
+                    CreditorAuthorizationStarted = true;
                 }
             }
 
@@ -146,6 +140,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
         {
             try
             {
+                Log.Informational("shouldRefreshBankIdUrl: " + shouldRefreshBankIdUrl);
                 if (ChallengeData is null)
                 {
                     Log.Error("Challenge data is null...");
