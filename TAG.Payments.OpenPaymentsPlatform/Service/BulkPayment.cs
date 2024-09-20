@@ -50,8 +50,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
 
             foreach (var option in validationResult.SplitPaymentOptions)
             {
-                var task = Client.CreatePaymentInitiation(Product, Amount, Currency, validationResult.BankAccount, Currency,
-                    option.Iban, Currency, option.AccountName, validationResult.TextMessage, Operation);
+                var task = Client.CreatePaymentInitiation(Product, option.Amount, Currency, validationResult.BankAccount, Currency,
+                    option.BankAccount, Currency, option.AccountName, option.Description, Operation);
 
                 tasks.Add(task);
             }

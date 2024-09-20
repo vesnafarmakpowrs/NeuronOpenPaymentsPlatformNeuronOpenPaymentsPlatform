@@ -56,45 +56,48 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                         DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
                 {
                     await Task.Delay(Configuration.PollingIntervalSeconds);
+
                     AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
 
                     AuthorizationStatusValue = authorizationStatus.Status;
                     TppMessages = authorizationStatus.Messages;
 
-                    if (!string.IsNullOrEmpty(authorizationStatus.ChallengeData?.BankIdURL))
+                    if (string.IsNullOrEmpty(authorizationStatus.ChallengeData?.BankIdURL))
                     {
-                        switch (AuthorizationStatusValue)
-                        {
-                            case AuthorizationStatusValue.started:
-                            case AuthorizationStatusValue.authenticationStarted:
+                        continue;
+                    }
 
-                                if (!PaymentAuthorizationStarted)
-                                {
-                                    PaymentAuthorizationStarted = true;
-                                }
+                    switch (AuthorizationStatusValue)
+                    {
+                        case AuthorizationStatusValue.started:
+                        case AuthorizationStatusValue.authenticationStarted:
 
-                                await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
-                                break;
+                            if (!PaymentAuthorizationStarted)
+                            {
+                                PaymentAuthorizationStarted = true;
+                            }
 
-                            case AuthorizationStatusValue.authoriseCreditorAccountStarted:
+                            await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
+                            break;
 
-                                if (!CreditorAuthorizationStarted)
-                                {
-                                    CreditorAuthorizationStarted = true;
-                                }
+                        case AuthorizationStatusValue.authoriseCreditorAccountStarted:
 
-                                await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
-                                break;
-                        }
+                            if (!CreditorAuthorizationStarted)
+                            {
+                                CreditorAuthorizationStarted = true;
+                            }
+
+                            await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
+                            break;
                     }
                 }
 
-                var sb = new StringBuilder();
-                if (TppMessages is not null && TppMessages.Length > 0)
+                if (TppMessages?.Length > 0)
                 {
+                    var sb = new StringBuilder();
                     foreach (var tppMessage in TppMessages)
                     {
-                        sb.AppendLine(tppMessage.ToString());
+                        sb.AppendLine(tppMessage.Text);
                     }
 
                     throw new Exception(sb.ToString());
@@ -149,8 +152,6 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
         {
             try
             {
-                Log.Informational("RequestClientVerification started");
-
                 if (ChallengeData is null)
                 {
                     Log.Error("Challenge data is null...");

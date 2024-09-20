@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
@@ -571,117 +573,116 @@ namespace TAG.Payments.OpenPaymentsPlatform
             return new KeyValuePair<IPAddress, PaymentResult>(ClientIpAddress, null);
         }
 
-        private object GetPropertyValue(object obj, string propertyName)
-        {
-            if (obj == null) throw new ArgumentNullException(nameof(obj));
-            Type type = obj.GetType();
-            PropertyInfo propertyInfo = type.GetProperty(propertyName);
-            if (propertyInfo != null)
-            {
-                return propertyInfo.GetValue(obj);
-            }
-
-            return null;
-        }
-
-        private ValidationResult ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
-            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency)
+        private ValidationResult ValidateParameters(
+            IDictionary<CaseInsensitiveString, object> contractParameters,
+            IDictionary<CaseInsensitiveString, CaseInsensitiveString> identityProperties,
+            decimal amount, string currency)
         {
             var result = new ValidationResult();
 
             try
             {
-                if (!ContractParameters.TryGetValue("Amount", out object Obj))
+                // Helper method to extract and convert a parameter
+                string GetStringParameter(string key, string errorMessage)
                 {
-                    throw new Exception("Amount not available in contract.");
+                    if (contractParameters.TryGetValue(key, out var value) && value is string strValue)
+                        return strValue;
+
+                    throw new Exception(errorMessage);
                 }
 
-                if (ContractParameters.TryGetValue("tabId", out object ObjTabId) && ObjTabId is string tabId)
-                    result.TabId = tabId;
-
-                if (ContractParameters.TryGetValue("callBackUrl", out object ObjcallBackURL) && ObjcallBackURL is string callBackURL)
-                    result.CallBackUrl = callBackURL;
-
-                if (ContractParameters.TryGetValue("requestFromMobilePhone", out object ObjIsMobile))
-                    result.RequestFromMobilePhone = Convert.ToBoolean(ObjIsMobile);
-
-                if (ContractParameters.TryGetValue("AccountName", out object ObjAccountName))
-                    result.AccountName = ObjAccountName?.ToString();
-
-                if (!(Obj is decimal ContractAmount))
+                decimal GetDecimalParameter(string key, string errorMessage)
                 {
-                    try
+                    if (contractParameters.TryGetValue(key, out var obj))
                     {
-                        ContractAmount = Expression.ToDecimal(Obj);
+                        if (obj is decimal value)
+                            return value;
+
+                        try
+                        {
+                            return Expression.ToDecimal(obj);
+                        }
+                        catch
+                        {
+                            throw new Exception($"Value for {key} is not of the correct type. Value: {Expression.ToString(obj)}, Type: {obj?.GetType().FullName}");
+                        }
                     }
-                    catch (Exception)
-                    {
-                        result.ErrorMessage = "Amount in contract not of the correct type. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
-                        return result;
-                    }
+
+                    throw new Exception(errorMessage);
                 }
 
-                if (ContractParameters.TryGetValue("SplitPaymentOptions", out object SplitObj) && SplitObj is object[] array)
-                {
-                    Log.Informational("SplitPaymentOptions exists and has: " + array.Length);
-                }
-                else
-                {
-                    Log.Informational("SplitPaymentOptions does not exists");
-                }
+                // Get mandatory parameters
+                var contractAmount = GetDecimalParameter("Amount", "Amount not available in contract.");
+                var contractCurrency = GetStringParameter("Currency", "Currency not available in contract.");
+                var contractAccount = GetStringParameter("Account", "Account not available in contract.");
 
-                if (ContractAmount != Amount)
+                // Validate amounts and currencies
+                if (contractAmount != amount)
                     throw new Exception("Amount in contract does not match amount in call.");
 
-                if (!ContractParameters.TryGetValue("Currency", out Obj))
-                    throw new Exception("Currency not available in contract.");
-
-                if (Obj is not string ContractCurrency)
-                    throw new Exception("Currency in contract not of the correct type. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName);
-
-                if (ContractCurrency != Currency)
+                if (contractCurrency != currency)
                     throw new Exception("Currency in contract does not match currency in call.");
 
-                if (!ContractParameters.TryGetValue("Account", out Obj))
-                    throw new Exception("Account not available in contract.");
-
-                if (Obj is not string ContractAccount)
-                    throw new Exception("Account in contract not of the correct type. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName);
-
-                if (ContractAccount.Length <= 2)
+                // Validate account
+                if (contractAccount.Length <= 2)
                     throw new Exception("Invalid bank account.");
 
-                result.BankAccount = ContractAccount;
+                result.BankAccount = contractAccount;
 
-                //User for payment link.
-                if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject) &&
-                    PersonalNumberObject is string PersonalNumberString &&
-                    !string.IsNullOrEmpty(PersonalNumberString))
+                // Optional parameters
+                if (contractParameters.TryGetValue("tabId", out var tabIdObj) && tabIdObj is string tabId)
+                    result.TabId = tabId;
+
+                if (contractParameters.TryGetValue("callBackUrl", out var callBackUrlObj) && callBackUrlObj is string callBackUrl)
+                    result.CallBackUrl = callBackUrl;
+
+                if (contractParameters.TryGetValue("requestFromMobilePhone", out var isMobileObj))
+                    result.RequestFromMobilePhone = Convert.ToBoolean(isMobileObj);
+
+                if (contractParameters.TryGetValue("AccountName", out var accountNameObj))
+                    result.AccountName = accountNameObj?.ToString();
+
+                if (contractParameters.TryGetValue("SplitPaymentOptions", out var splitObj))
                 {
-                    result.PersonalNumber = PersonalNumberString;
+                    if(splitObj is not string s)
+                    {
+                        throw new Exception("Split object must be a valid json string.");
+                    }
+
+                    Log.Informational(s);
+
+                    try
+                    {
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true // Ignore case when matching properties
+                        };
+
+                        result.SplitPaymentOptions = JsonSerializer.Deserialize<List<SplitPaymentOption>>(s, options);
+                    }
+                    catch
+                    {
+                        throw new Exception("Split object must be a valid json string.");
+                    }
                 }
-                else
+
+                if(result.SplitPaymentOptions.Any(m => string.IsNullOrEmpty(m.BankAccount) || string.IsNullOrEmpty(m.AccountName) 
+                || string.IsNullOrEmpty(m.Description) || m.Amount <= 0))
                 {
-                    IdentityProperties.TryGetValue("PNR", out CaseInsensitiveString personalNumber);
-                    result.PersonalNumber = personalNumber;
+                    throw new Exception("SplitPaymentOptions are not valid...");
                 }
 
-                if (string.IsNullOrEmpty(result.PersonalNumber))
-                {
-                    throw new Exception("Personal number missing in identity or contract parameters.");
-                }
+                // Personal number extraction
+                result.PersonalNumber = GetPersonalNumber(identityProperties, contractParameters);
 
-                if (ContractParameters.TryGetValue("Message", out Obj))
+                // Message validation
+                if (contractParameters.TryGetValue("Message", out var messageObj) && messageObj is string message)
                 {
-                    if (Obj is not string s)
-                        throw new Exception("Message not a string. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName);
-
-                    s = s.Trim();
-                    if (s.Length > 10)
+                    message = message.Trim();
+                    if (message.Length > 10)
                         throw new Exception("Message cannot be longer than 10 characters.");
 
-                    result.TextMessage = s;
+                    result.TextMessage = message;
                 }
             }
             catch (Exception ex)
@@ -690,6 +691,16 @@ namespace TAG.Payments.OpenPaymentsPlatform
             }
 
             return result;
+        }
+
+        private string GetPersonalNumber(IDictionary<CaseInsensitiveString, CaseInsensitiveString> identityProperties,
+                                          IDictionary<CaseInsensitiveString, object> contractParameters)
+        {
+            if (contractParameters.TryGetValue("personalNumber", out var personalNumberObj) && personalNumberObj is string personalNumber && !string.IsNullOrEmpty(personalNumber))
+                return personalNumber;
+
+            identityProperties.TryGetValue("PNR", out var personalNumberKey);
+            return personalNumberKey;
         }
 
 

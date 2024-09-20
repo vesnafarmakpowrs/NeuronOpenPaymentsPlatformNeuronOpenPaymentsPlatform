@@ -1,9 +1,13 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using System.Text.Json;
+using Waher.Content;
 using Waher.Content.Html.Elements;
 using Waher.Networking.Sniffers;
 using Waher.Runtime.Profiling.Events;
 using Waher.Runtime.Settings;
 using Waher.Script.Functions.Vectors;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxTokenParser;
 
 namespace TAG.Networking.OpenPaymentsPlatform.Test
 {
@@ -23,13 +27,13 @@ namespace TAG.Networking.OpenPaymentsPlatform.Test
 			// await RuntimeSettings.SetAsync("OpenPaymentsPlatform.ClientSecret", string.Empty);
 
 			// Reading API Key
-			string ClientID = await RuntimeSettings.GetAsync("OpenPaymentsPlatform.ClientID", string.Empty);
-			string ClientSecret = await RuntimeSettings.GetAsync("OpenPaymentsPlatform.ClientSecret", string.Empty);
-			if (string.IsNullOrEmpty(ClientID) || string.IsNullOrEmpty(ClientSecret))
-				Assert.Fail("Credentials not configured. Make sure the credentials are configured before running tests.");
+			//string ClientID = await RuntimeSettings.GetAsync("OpenPaymentsPlatform.ClientID", string.Empty);
+			//string ClientSecret = await RuntimeSettings.GetAsync("OpenPaymentsPlatform.ClientSecret", string.Empty);
+			//if (string.IsNullOrEmpty(ClientID) || string.IsNullOrEmpty(ClientSecret))
+			//	Assert.Fail("Credentials not configured. Make sure the credentials are configured before running tests.");
 
-			client = OpenPaymentsPlatformClient.CreateSandbox(ClientID, ClientSecret, ServicePurpose.Private,
-				new ConsoleOutSniffer(BinaryPresentationMethod.Base64, LineEnding.NewLine));
+			//client = OpenPaymentsPlatformClient.CreateSandbox(ClientID, ClientSecret, ServicePurpose.Private,
+			//	new ConsoleOutSniffer(BinaryPresentationMethod.Base64, LineEnding.NewLine));
 		}
 
 		[ClassCleanup]
@@ -39,7 +43,38 @@ namespace TAG.Networking.OpenPaymentsPlatform.Test
 			client = null;
 		}
 
-		[TestMethod]
+        [TestMethod]
+        public async Task Test_00_serialize()
+        {
+			try
+			{
+				var test = "[\r\n\t{\r\n\t\t\"BankAccount\": \'test\",\r\n\t\t\"ServiceProviderId\": \"test\",\r\n\t\t\"ServiceProviderType\": \"test\",\r\n\t\t\"AccountName\": \"test\",\r\n\t\t\"Description\": \"test\",\r\n\t\t\"Amount\": 5.123,\r\n\t\t\"IsSuccess\": false\r\n\t},\r\n\t{\r\n\t\t\"BankAccount\": \"SE9560000000000421038098\",\r\n\t\t\"ServiceProviderId\": \".HANDSESS\",\r\n\t\t\"ServiceProviderType\": \"TAG.Payments.OpenPaymentsPlatform.OpenPaymentsPlatformServiceProvider\",\r\n\t\t\"Description\": \"Vaulter\",\r\n\t\t\"AccountName\": \"Vaulter\",\r\n\t\t\"Amount\": 5,\r\n\t\t\"IsSuccess\": false\r\n\t}\r\n]";
+
+				var options = new JsonSerializerOptions
+				{
+					PropertyNameCaseInsensitive = true // Ignore case when matching properties
+				};
+
+				var SplitPaymentOptions = System.Text.Json.JsonSerializer.Deserialize<List<SplitPaymentOption>>(test, options);
+			}
+			catch (System.Exception ex)
+			{
+
+			}
+			
+
+			//if(obj is Array)
+			//{
+			//	foreach(var item in obj as object[])
+			//	{
+			//		var x = new SplitPaymentOption(item);
+   //             }
+			//}
+
+            //await client.CheckToken(ServiceApi.PaymentInitiation);
+        }
+
+        [TestMethod]
 		public async Task Test_01_GetToken()
 		{
 			Assert.IsNotNull(client);
