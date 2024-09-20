@@ -481,13 +481,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     new BulkPayment(Operation, Client, Product, State, SuccessUrl, ClientUrlCallback) :
                     new SinglePayment(Operation, Client, Product, State, SuccessUrl, ClientUrlCallback);
 
-                var errorMessage = await payment.InitiatePayment(validatedParameters, Amount, Currency);
-                if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    throw new Exception(errorMessage);
-                }
-
+                await payment.InitiatePayment(validatedParameters, Amount, Currency);
                 await Payment.NotifyTransactionState(TransactionState.TransactionCompleted, TabId);
+
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
@@ -644,7 +640,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 if (contractParameters.TryGetValue("SplitPaymentOptions", out var splitObj))
                 {
-                    if(splitObj is not string s)
+                    if (splitObj is not string s)
                     {
                         throw new Exception("Split object must be a valid json string.");
                     }
@@ -666,7 +662,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     }
                 }
 
-                if(result.SplitPaymentOptions.Any(m => string.IsNullOrEmpty(m.BankAccount) || string.IsNullOrEmpty(m.AccountName) 
+                if (result.SplitPaymentOptions.Any(m => string.IsNullOrEmpty(m.BankAccount) || string.IsNullOrEmpty(m.AccountName)
                 || string.IsNullOrEmpty(m.Description) || m.Amount <= 0))
                 {
                     throw new Exception("SplitPaymentOptions are not valid...");

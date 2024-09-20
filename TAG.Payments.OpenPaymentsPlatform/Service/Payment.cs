@@ -28,91 +28,85 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             SuccessUrl = successUrl;
             ClientUrlCallback = clientUrlCallback;
         }
-        public async Task<string> InitiatePayment(ValidationResult validationResult, decimal amount, string currency)
+
+        private void EnsureNoErrorMessages(TppMessage[] TppMessages)
         {
-            try
+            if (TppMessages?.Length > 0)
             {
-                var Configuration = await ServiceConfiguration.GetCurrent();
-                if (!Configuration.IsWellDefined)
+                var sb = new StringBuilder();
+                foreach (var tppMessage in TppMessages)
                 {
-                    throw new Exception("Configuration is not well defined");
+                    sb.AppendLine(tppMessage.Text);
                 }
 
-                (string Id, AuthenticationMethod authenticationMethod, AuthorizationInformation AuthorizationInformation) = await StartPaymentAndChoseAuthenticationMethod(validationResult, amount, currency);
-                var psuDataResponse = await PutUserData(Id, AuthorizationInformation.AuthorizationID, authenticationMethod.MethodId);
-
-                await RequestClientVerification(psuDataResponse.ChallengeData, psuDataResponse.Links?.ScaOAuth, validationResult.TabId, authenticationMethod);
-
-                TppMessage[] TppMessages = psuDataResponse.Messages;
-                AuthorizationStatusValue AuthorizationStatusValue = psuDataResponse.Status;
-                DateTime Start = DateTime.Now;
-
-                bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
-                            AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
-                bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
-
-                while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
-                        AuthorizationStatusValue != AuthorizationStatusValue.failed &&
-                        DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
-                {
-                    await Task.Delay(Configuration.PollingIntervalSeconds);
-
-                    AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
-
-                    AuthorizationStatusValue = authorizationStatus.Status;
-                    TppMessages = authorizationStatus.Messages;
-
-                    if (string.IsNullOrEmpty(authorizationStatus.ChallengeData?.BankIdURL))
-                    {
-                        continue;
-                    }
-
-                    switch (AuthorizationStatusValue)
-                    {
-                        case AuthorizationStatusValue.started:
-                        case AuthorizationStatusValue.authenticationStarted:
-
-                            if (!PaymentAuthorizationStarted)
-                            {
-                                PaymentAuthorizationStarted = true;
-                            }
-
-                            await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
-                            break;
-
-                        case AuthorizationStatusValue.authoriseCreditorAccountStarted:
-
-                            if (!CreditorAuthorizationStarted)
-                            {
-                                CreditorAuthorizationStarted = true;
-                            }
-
-                            await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
-                            break;
-                    }
-                }
-
-                if (TppMessages?.Length > 0)
-                {
-                    var sb = new StringBuilder();
-                    foreach (var tppMessage in TppMessages)
-                    {
-                        sb.AppendLine(tppMessage.Text);
-                    }
-
-                    throw new Exception(sb.ToString());
-                }
-
-                await NotifyTransactionState(TransactionState.TransactionInProgress, validationResult.TabId);
-                await OnFinalized(AuthorizationStatusValue, Id);
+                throw new Exception(sb.ToString());
             }
-            catch (Exception ex)
+        }
+
+        public async Task InitiatePayment(ValidationResult validationResult, decimal amount, string currency)
+        {
+            var Configuration = await ServiceConfiguration.GetCurrent();
+            if (!Configuration.IsWellDefined)
             {
-                Log.Error(ex);
-                return ex.Message;
+                throw new Exception("Configuration is not well defined");
             }
 
-            return string.Empty;
+            (string Id, AuthenticationMethod authenticationMethod, AuthorizationInformation AuthorizationInformation) = await StartPaymentAndChoseAuthenticationMethod(validationResult, amount, currency);
+            var psuDataResponse = await PutUserData(Id, AuthorizationInformation.AuthorizationID, authenticationMethod.MethodId);
+
+            await RequestClientVerification(psuDataResponse.ChallengeData, psuDataResponse.Links?.ScaOAuth, validationResult.TabId, authenticationMethod);
+
+            TppMessage[] TppMessages = psuDataResponse.Messages;
+
+            EnsureNoErrorMessages(TppMessages);
+
+            AuthorizationStatusValue AuthorizationStatusValue = psuDataResponse.Status;
+            DateTime Start = DateTime.Now;
+
+            bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
+                        AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
+            bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
+
+            while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
+                    AuthorizationStatusValue != AuthorizationStatusValue.failed &&
+                    DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
+            {
+                await Task.Delay(Configuration.PollingIntervalSeconds);
+
+                AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
+
+                AuthorizationStatusValue = authorizationStatus.Status;
+                TppMessages = authorizationStatus.Messages;
+
+                if (string.IsNullOrEmpty(authorizationStatus.ChallengeData?.BankIdURL))
+                {
+                    continue;
+                }
+
+                if (AuthorizationStatusValue == AuthorizationStatusValue.started || AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
+                {
+                    if (!PaymentAuthorizationStarted)
+                    {
+                        PaymentAuthorizationStarted = true;
+                    }
+
+                    await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
+                }
+                else if (AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted)
+                {
+                    if (!CreditorAuthorizationStarted)
+                    {
+                        CreditorAuthorizationStarted = true;
+                    }
+
+                    await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
+                }
+            }
+
+            EnsureNoErrorMessages(TppMessages);
+
+            await NotifyTransactionState(TransactionState.TransactionInProgress, validationResult.TabId);
+            await OnFinalized(AuthorizationStatusValue, Id);
         }
 
         protected abstract Task<(string, AuthenticationMethod, AuthorizationInformation)> StartPaymentAndChoseAuthenticationMethod(ValidationResult validationResult, decimal amount, string currency);
