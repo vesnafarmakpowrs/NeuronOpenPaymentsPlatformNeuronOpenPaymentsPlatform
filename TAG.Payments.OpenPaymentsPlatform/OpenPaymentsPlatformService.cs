@@ -658,10 +658,16 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         };
 
                         result.SplitPaymentOptions = JsonSerializer.Deserialize<List<SplitPaymentOption>>(s, options);
+
+                        var total = result.SplitPaymentOptions.Sum(m => m.Amount);
+                        if ((amount - total) > 0.1M)
+                        {
+                            throw new Exception($"Split payment total amount not valid: Expected: {amount} but: {total}");
+                        }
                     }
-                    catch
+                    catch(Exception)
                     {
-                        throw new Exception("Split object must be a valid json string.");
+                        throw;
                     }
                 }
 
