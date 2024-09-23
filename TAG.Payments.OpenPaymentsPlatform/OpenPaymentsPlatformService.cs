@@ -420,8 +420,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     ContractParameters["Currency"] = Currency;
                 }
 
-                ValidationResult validatedParameters = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency);
+                ValidationResult validatedParameters = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency);                
                 string Message = validatedParameters.ErrorMessage;
+                TabId = validatedParameters.TabId;
 
                 if (!string.IsNullOrEmpty(Message))
                 {
@@ -449,8 +450,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 }
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
-                if (!(P.Value is null))
+                if (P.Value is not null)
+                {
                     return P.Value;
+                }
 
                 IPAddress ClientIpAddress = P.Key;
 
