@@ -22,19 +22,45 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
         protected override async Task<AuthorizationStatus> GetAuthorizationStatus(string Id, string AuthorizationId)
         {
             return await Client.GetPaymentBasketAuthorizationStatus(Id, AuthorizationId, Operation);
-        }       
+        }
 
         protected override async Task OnFinalized(AuthorizationStatusValue Status, string Id)
         {
-            BasketTransactionStatus BasketStatus = await Client.GetPaymentBasketStatus(Id, Operation);
-            bool IsPaid = Status == AuthorizationStatusValue.finalised &&
-                BasketStatus.Status != PaymentBasketStatus.RJCT;
-
-            Log.Informational("PaymentBasketStatus:" + BasketStatus.Status);
-
-            if (!IsPaid)
+            try
             {
-                throw new Exception($"Payment not completed. AuthorizationStatusValue: {Status} , BasketStatus: {BasketStatus.Status}");
+                BasketTransactionStatus BasketStatus = await Client.GetPaymentBasketStatus(Id, Operation);
+                bool IsPaid = Status == AuthorizationStatusValue.finalised &&
+                    BasketStatus.Status != PaymentBasketStatus.RJCT;
+
+                Log.Informational("PaymentBasketStatus:" + BasketStatus.Status);
+
+                if (!IsPaid)
+                {
+                    throw new Exception($"Payment not completed. AuthorizationStatusValue: {Status} , BasketStatus: {BasketStatus.Status}");
+                }
+
+                if (OngoingPayments.Any() != true)
+                {
+                    throw new Exception("Ongoing payments not populated properly.");
+                }
+
+                List<PaymentTransactionStatus> payments = new();
+                foreach (var payment in OngoingPayments)
+                {
+                    var paymentStatus = await Client.GetPaymentInitiationStatus(Product, payment, Operation);
+                    payments.Add(paymentStatus);
+                }
+
+                if (payments.Any(transaction =>
+                        transaction.Status == PaymentStatus.RJCT || transaction.Status == PaymentStatus.CANC))
+                {
+                    throw new Exception("One ore more transactions are not completed. Check the logs.");
+                }
+            }
+            finally
+            {
+                BasketId = string.Empty;
+                OngoingPayments = null;
             }
         }
 
@@ -60,6 +86,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
 
             OngoingPayments = results.Select(m => m.PaymentId).ToArray();
             var Basket = await Client.CreatePaymentBasket(OngoingPayments, Operation);
+            BasketId = Basket.BasketId;
 
             var AuthorizationStatus = await Client.StartPaymentBasketAuthorization(Basket.BasketId, Operation);
             AuthenticationMethod authenticationMethod = SelectAuthenticationMethod(AuthorizationStatus, validationResult.RequestFromMobilePhone);

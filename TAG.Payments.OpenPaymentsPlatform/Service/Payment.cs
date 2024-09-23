@@ -66,35 +66,33 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                         AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
             bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
 
-            Log.Informational("started AuthorizationStatusValue: " + AuthorizationStatusValue);
-
             while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
                     AuthorizationStatusValue != AuthorizationStatusValue.failed &&
                     DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
             {
-                await Task.Delay(Configuration.PollingIntervalSeconds);
+                    await Task.Delay(Configuration.PollingIntervalSeconds);
 
-                AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
+                    AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
 
-                AuthorizationStatusValue = authorizationStatus.Status;
-                TppMessages = authorizationStatus.Messages;
+                    if (authorizationStatus is null)
+                    {
+                        continue;
+                    }
 
-                if (string.IsNullOrEmpty(authorizationStatus.ChallengeData?.BankIdURL))
-                {
-                    continue;
-                }
+                    AuthorizationStatusValue = authorizationStatus.Status;
+                    TppMessages = authorizationStatus.Messages;
 
-                if (AuthorizationStatusValue == AuthorizationStatusValue.started ||
-                    AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
-                {
-                    await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
-                    PaymentAuthorizationStarted = true;
-                }
-                else if (AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted)
-                {
-                    await RequestClientVerification(authorizationStatus.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
-                    CreditorAuthorizationStarted = true;
-                }
+                    if (AuthorizationStatusValue == AuthorizationStatusValue.started ||
+                        AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
+                    {
+                        await RequestClientVerification(authorizationStatus?.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
+                        PaymentAuthorizationStarted = true;
+                    }
+                    else if (AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted)
+                    {
+                        await RequestClientVerification(authorizationStatus?.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
+                        CreditorAuthorizationStarted = true;
+                    }              
             }
 
             EnsureNoErrorMessages(TppMessages);
