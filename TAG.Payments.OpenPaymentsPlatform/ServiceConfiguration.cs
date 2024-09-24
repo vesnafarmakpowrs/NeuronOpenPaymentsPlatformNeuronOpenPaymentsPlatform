@@ -130,6 +130,24 @@ namespace TAG.Payments.OpenPaymentsPlatform
             private set;
         }
 
+        public string VaulterBankAccount
+        {
+            get;
+            private set;
+        }
+
+        public string VaulterBankBic
+        {
+            get;
+            private set;
+        }
+
+        public string VaulterAccountName
+        {
+            get;
+            private set;
+        }
+
         /// <summary>
         /// Purpose for accessing service.
         /// </summary>
@@ -150,6 +168,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     !string.IsNullOrEmpty(this.NeuronBankAccountName) &&
                     !string.IsNullOrEmpty(this.NeuronBankBic) &&
                     !string.IsNullOrEmpty(this.PersonalID) &&
+                    !string.IsNullOrEmpty(this.VaulterBankAccount) &&
+                    !string.IsNullOrEmpty(this.VaulterBankBic) &&
+                    !string.IsNullOrEmpty(this.VaulterAccountName) &&
                     (!(this.Certificate is null) || this.OperationMode == OperationMode.Sandbox) &&
                     this.PollingIntervalSeconds > 0 &&
                     this.TimeoutMinutes > 0;
@@ -188,6 +209,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
             Result.OrganizationID = await RuntimeSettings.GetAsync(Prefix + ".OrganizationID", string.Empty);
             Result.PollingIntervalSeconds = (int)await RuntimeSettings.GetAsync(Prefix + ".PollingIntervalSeconds", 0.0) * 1000;
             Result.TimeoutMinutes = (int)await RuntimeSettings.GetAsync(Prefix + ".TimeoutMinutes", 0.0);
+
+            Result.VaulterBankAccount = await RuntimeSettings.GetAsync(Prefix + ".VaulterBankAccount", string.Empty);
+            Result.VaulterBankBic = await RuntimeSettings.GetAsync(Prefix + ".VaulterBankBic", string.Empty);
+            Result.VaulterAccountName = await RuntimeSettings.GetAsync(Prefix + ".VaulterAccountName", string.Empty);
 
             string CertBase64 = await RuntimeSettings.GetAsync(Prefix + ".Certificate", string.Empty);
             string CertPassword = await RuntimeSettings.GetAsync(Prefix + ".CertificatePassword", string.Empty);

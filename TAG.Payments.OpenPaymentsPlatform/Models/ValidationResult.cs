@@ -14,6 +14,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Models
         public string CallBackUrl { get; set; }
         public bool RequestFromMobilePhone { get; set; }
         public string ErrorMessage { get; set; }
+        public bool IsInstantPayment { get; set; }
         public List<SplitPaymentOption> SplitPaymentOptions { get; set; } = new List<SplitPaymentOption>();
     }
 }

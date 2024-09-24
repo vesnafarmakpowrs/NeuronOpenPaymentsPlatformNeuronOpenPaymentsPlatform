@@ -638,6 +638,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (contractParameters.TryGetValue("requestFromMobilePhone", out var isMobileObj))
                     result.RequestFromMobilePhone = Convert.ToBoolean(isMobileObj);
 
+                if (contractParameters.TryGetValue("isInstantPayment", out var isInstantPaymentObj))
+                    result.IsInstantPayment = Convert.ToBoolean(isInstantPaymentObj);
+
                 if (contractParameters.TryGetValue("AccountName", out var accountNameObj))
                     result.AccountName = accountNameObj?.ToString();
 
@@ -647,8 +650,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     {
                         throw new Exception("Split object must be a valid json string.");
                     }
-
-                    Log.Informational(s);
 
                     try
                     {
@@ -685,7 +686,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 {
                     message = message.Trim();
                     if (message.Length > 10)
+                    {
                         throw new Exception("Message cannot be longer than 10 characters.");
+                    }
 
                     result.TextMessage = message;
                 }
@@ -1170,6 +1173,12 @@ namespace TAG.Payments.OpenPaymentsPlatform
             if (!string.IsNullOrEmpty(Message))
             {
                 return new PaymentResult(Message);
+            }
+
+            if (validationResult.IsInstantPayment)
+            {
+                Log.Informational("IsInstantPayment: eDaler destroyed without actual selling.");
+                return new PaymentResult(Amount, Currency);
             }
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode);
