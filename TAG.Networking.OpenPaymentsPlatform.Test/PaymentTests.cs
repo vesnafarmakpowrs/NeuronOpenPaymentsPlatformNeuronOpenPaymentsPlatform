@@ -55,7 +55,7 @@ namespace TAG.Networking.OpenPaymentsPlatform.Test
 					PropertyNameCaseInsensitive = true // Ignore case when matching properties
 				};
 
-				var SplitPaymentOptions = System.Text.Json.JsonSerializer.Deserialize<List<SplitPaymentOption>>(test, options);
+				var SplitPaymentOptions = System.Text.Json.JsonSerializer.Deserialize<List<PaymentOption>>(test, options);
 			}
 			catch (System.Exception ex)
 			{

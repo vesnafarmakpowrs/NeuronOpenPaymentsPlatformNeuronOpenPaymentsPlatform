@@ -658,7 +658,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             PropertyNameCaseInsensitive = true // Ignore case when matching properties
                         };
 
-                        result.SplitPaymentOptions = JsonSerializer.Deserialize<List<SplitPaymentOption>>(s, options);
+                        result.SplitPaymentOptions = JsonSerializer.Deserialize<List<PaymentOption>>(s, options);
 
                         var total = result.SplitPaymentOptions.Sum(m => m.Amount);
                         if ((amount - total) > 0.1M)

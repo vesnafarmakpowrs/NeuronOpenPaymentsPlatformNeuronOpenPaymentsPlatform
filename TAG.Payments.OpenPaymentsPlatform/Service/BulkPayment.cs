@@ -11,7 +11,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
 {
     internal sealed class BulkPayment : Payment
     {
-        private string[] OngoingPayments;
+        private List<PaymentOption> OngoingPayments;
         private string BasketId;
         public BulkPayment(OperationInformation operation, OpenPaymentsPlatformClient client, PaymentProduct product,
                 object state, string successUrl, ClientUrlEventHandler handler)
@@ -44,15 +44,19 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                     throw new Exception("Ongoing payments not populated properly.");
                 }
 
-                List<PaymentTransactionStatus> payments = new();
-                foreach (var payment in OngoingPayments)
+                await Parallel.ForEachAsync(OngoingPayments, async (Payment, cancellationToken) =>
                 {
-                    var paymentStatus = await Client.GetPaymentInitiationStatus(Product, payment, Operation);
-                    payments.Add(paymentStatus);
-                }
+                    var paymentStatus = await Client.GetPaymentInitiationStatus(Product, Payment.PaymentId, Operation);
+                    Payment.Status = paymentStatus.Status;
 
-                if (payments.Any(transaction =>
-                        transaction.Status == PaymentStatus.RJCT || transaction.Status == PaymentStatus.CANC))
+                    if (paymentStatus?.Messages?.Length > 0)
+                    {
+                        Payment.ErrorMessage = string.Join(Environment.NewLine, paymentStatus.Messages.Select(m => m.Text));
+                    }
+                });
+
+                if (OngoingPayments.Any(transaction =>
+                        transaction.Status == PaymentStatus.RJCT || transaction.Status == PaymentStatus.CANC || !string.IsNullOrEmpty(transaction.ErrorMessage)))
                 {
                     throw new Exception("One ore more transactions are not completed. Check the logs.");
                 }
@@ -72,21 +76,19 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
 
         protected override async Task<(string, AuthenticationMethod, AuthorizationInformation)> StartPaymentAndChoseAuthenticationMethod(ValidationResult validationResult, decimal Amount, string Currency)
         {
-            var tasks = new List<Task<PaymentInitiationReference>>();
+            await Parallel.ForEachAsync(validationResult.SplitPaymentOptions, async (option, cancellationToken) =>
+             {
+                 var paymentInitiation = await Client.CreatePaymentInitiation(Product, option.Amount, Currency, validationResult.BankAccount, Currency,
+                     option.BankAccount, Currency, option.AccountName, option.Description, Operation);
 
-            foreach (var option in validationResult.SplitPaymentOptions)
-            {
-                var task = Client.CreatePaymentInitiation(Product, option.Amount, Currency, validationResult.BankAccount, Currency,
-                    option.BankAccount, Currency, option.AccountName, option.Description, Operation);
+                 option.PaymentId = paymentInitiation.PaymentId;
+             });
 
-                tasks.Add(task);
-            }
+            var paymentIds = validationResult.SplitPaymentOptions.Select(m => m.PaymentId).ToArray();
+            var Basket = await Client.CreatePaymentBasket(paymentIds, Operation);
 
-            var results = await Task.WhenAll(tasks);
-
-            OngoingPayments = results.Select(m => m.PaymentId).ToArray();
-            var Basket = await Client.CreatePaymentBasket(OngoingPayments, Operation);
             BasketId = Basket.BasketId;
+            OngoingPayments = validationResult.SplitPaymentOptions;
 
             var AuthorizationStatus = await Client.StartPaymentBasketAuthorization(Basket.BasketId, Operation);
             AuthenticationMethod authenticationMethod = SelectAuthenticationMethod(AuthorizationStatus, validationResult.RequestFromMobilePhone);
