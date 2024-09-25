@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
 using Waher.Events;
+using Waher.Persistence;
 
 namespace TAG.Payments.OpenPaymentsPlatform.Service
 {
@@ -24,7 +25,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             return await Client.GetPaymentBasketAuthorizationStatus(Id, AuthorizationId, Operation);
         }
 
-        protected override async Task OnFinalized(AuthorizationStatusValue Status, string Id)
+        protected override async Task OnFinalized(AuthorizationStatusValue Status, string Id, CaseInsensitiveString TokenId)
         {
             try
             {
@@ -54,6 +55,8 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                         Payment.ErrorMessage = string.Join(Environment.NewLine, paymentStatus.Messages.Select(m => m.Text));
                     }
                 });
+
+                await SavePaymentStatusInToken(TokenId, OngoingPayments);
 
                 if (OngoingPayments.Any(transaction =>
                         transaction.Status == PaymentStatus.RJCT || transaction.Status == PaymentStatus.CANC || !string.IsNullOrEmpty(transaction.ErrorMessage)))

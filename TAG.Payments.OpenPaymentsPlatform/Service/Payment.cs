@@ -2,12 +2,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
 using Waher.Content;
 using Waher.Events;
 using Waher.IoTGateway;
+using Waher.Persistence;
 
 namespace TAG.Payments.OpenPaymentsPlatform.Service
 {
@@ -43,7 +46,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             }
         }
 
-        public async Task InitiatePayment(ValidationResult validationResult, decimal amount, string currency)
+        public async Task InitiatePayment(ValidationResult validatedParameters, decimal amount, string currency)
         {
             var Configuration = await ServiceConfiguration.GetCurrent();
             if (!Configuration.IsWellDefined)
@@ -51,13 +54,13 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                 throw new Exception("Configuration is not well defined");
             }
 
-            (string Id, AuthenticationMethod authenticationMethod, AuthorizationInformation AuthorizationInformation) = await StartPaymentAndChoseAuthenticationMethod(validationResult, amount, currency);
+            (string Id, AuthenticationMethod authenticationMethod, AuthorizationInformation AuthorizationInformation) = await StartPaymentAndChoseAuthenticationMethod(validatedParameters, amount, currency);
             var psuDataResponse = await PutUserData(Id, AuthorizationInformation.AuthorizationID, authenticationMethod.MethodId);
 
             TppMessage[] TppMessages = psuDataResponse.Messages;
             EnsureNoErrorMessages(TppMessages);
 
-            await RequestClientVerification(psuDataResponse.ChallengeData, psuDataResponse.Links?.ScaOAuth, validationResult.TabId, authenticationMethod);
+            await RequestClientVerification(psuDataResponse.ChallengeData, psuDataResponse.Links?.ScaOAuth, validatedParameters.TabId, authenticationMethod);
 
             AuthorizationStatusValue AuthorizationStatusValue = psuDataResponse.Status;
             DateTime Start = DateTime.Now;
@@ -70,41 +73,42 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
                     AuthorizationStatusValue != AuthorizationStatusValue.failed &&
                     DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
             {
-                    await Task.Delay(Configuration.PollingIntervalSeconds);
+                await Task.Delay(Configuration.PollingIntervalSeconds);
 
-                    AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
+                AuthorizationStatus authorizationStatus = await GetAuthorizationStatus(Id, AuthorizationInformation.AuthorizationID);
 
-                    if (authorizationStatus is null)
-                    {
-                        continue;
-                    }
+                if (authorizationStatus is null)
+                {
+                    continue;
+                }
 
-                    AuthorizationStatusValue = authorizationStatus.Status;
-                    TppMessages = authorizationStatus.Messages;
+                AuthorizationStatusValue = authorizationStatus.Status;
+                TppMessages = authorizationStatus.Messages;
 
-                    if (AuthorizationStatusValue == AuthorizationStatusValue.started ||
-                        AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
-                    {
-                        await RequestClientVerification(authorizationStatus?.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !PaymentAuthorizationStarted);
-                        PaymentAuthorizationStarted = true;
-                    }
-                    else if (AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted)
-                    {
-                        await RequestClientVerification(authorizationStatus?.ChallengeData, string.Empty, validationResult.TabId, authenticationMethod, !CreditorAuthorizationStarted);
-                        CreditorAuthorizationStarted = true;
-                    }              
+                if (AuthorizationStatusValue == AuthorizationStatusValue.started ||
+                    AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted)
+                {
+                    await RequestClientVerification(authorizationStatus?.ChallengeData, string.Empty, validatedParameters.TabId, authenticationMethod, !PaymentAuthorizationStarted);
+                    PaymentAuthorizationStarted = true;
+                }
+                else if (AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted)
+                {
+                    await RequestClientVerification(authorizationStatus?.ChallengeData, string.Empty, validatedParameters.TabId, authenticationMethod, !CreditorAuthorizationStarted);
+                    CreditorAuthorizationStarted = true;
+                }
             }
 
             EnsureNoErrorMessages(TppMessages);
 
-            await NotifyTransactionState(TransactionState.TransactionInProgress, validationResult.TabId);
-            await OnFinalized(AuthorizationStatusValue, Id);
+            await NotifyTransactionState(TransactionState.TransactionInProgress, validatedParameters.TabId);
+
+            await OnFinalized(AuthorizationStatusValue, Id, validatedParameters.TokenId);
         }
 
         protected abstract Task<(string, AuthenticationMethod, AuthorizationInformation)> StartPaymentAndChoseAuthenticationMethod(ValidationResult validationResult, decimal amount, string currency);
         protected abstract Task<PaymentServiceUserDataResponse> PutUserData(string Id, string AuthorizationId, string AuthenticationMethodId);
         protected abstract Task<AuthorizationStatus> GetAuthorizationStatus(string Id, string AuthorizationId);
-        protected abstract Task OnFinalized(AuthorizationStatusValue Status, string Id);
+        protected abstract Task OnFinalized(AuthorizationStatusValue Status, string Id, CaseInsensitiveString TokenId);
         protected AuthenticationMethod SelectAuthenticationMethod(AuthorizationInformation AuthorizationStatus, bool isFromMobilePhone)
         {
             AuthenticationMethod AuthenticationMethod;
@@ -127,6 +131,32 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             }
 
             return AuthenticationMethod;
+        }
+
+        protected async Task SavePaymentStatusInToken(CaseInsensitiveString TokenId, IList<PaymentOption> payments)
+        {
+            if (string.IsNullOrEmpty(TokenId) || payments.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                var json = JsonSerializer.Serialize(payments);
+                var xmlNote = $"<SavePaymentStatus xmlns='https://{Gateway.Domain}/Downloads/EscrowPaylinkSE.xsd' paymentStatusObject='{json}' />";
+
+                XmlDocument xmlDocument = new();
+                xmlDocument.LoadXml(xmlNote);
+
+                await InternetContent.PostAsync(
+                    new Uri("https://" + Gateway.Domain + ":8088/AddNote/" + TokenId),
+                    xmlDocument,
+                    Gateway.Certificate);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.Message, nameof(OpenPaymentsPlatformService), TokenId);
+            }
         }
 
         protected async Task RequestClientVerification(

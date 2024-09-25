@@ -9,5 +9,6 @@
         public string PaymentId { get; set; }
         public string ErrorMessage { get; set; }
         public PaymentStatus Status { get; set; }
+        public string StringStatus { get => Status.ToString(); }
     }
 }

@@ -6,6 +6,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Models
 {
     public class ValidationResult
     {
+        public CaseInsensitiveString TokenId { get; set; }
         public CaseInsensitiveString PersonalNumber { get; set; }
         public string BankAccount { get; set; }
         public string AccountName { get; set; }

@@ -4,13 +4,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
+using Waher.Persistence;
 using Waher.Script.Operators.Arithmetics;
 
 namespace TAG.Payments.OpenPaymentsPlatform.Service
 {
     internal class SinglePayment : Payment
     {
-        public SinglePayment(OperationInformation operation, OpenPaymentsPlatformClient client, PaymentProduct product, object state, string successUrl, ClientUrlEventHandler clientUrlCallback)
+        public SinglePayment(OperationInformation operation, OpenPaymentsPlatformClient client, 
+            PaymentProduct product, object state, string successUrl, ClientUrlEventHandler clientUrlCallback)
             : base(operation, client, product, state, successUrl, clientUrlCallback)
         {
         }
@@ -20,7 +22,7 @@ namespace TAG.Payments.OpenPaymentsPlatform.Service
             return await Client.GetPaymentInitiationAuthorizationStatus(Product, Id, AuthorizationId, Operation);
         }
 
-        protected override async Task OnFinalized(AuthorizationStatusValue Status, string Id)
+        protected override async Task OnFinalized(AuthorizationStatusValue Status, string Id, CaseInsensitiveString TokenId)
         {
             PaymentTransactionStatus TransactionStatus = await Client.GetPaymentInitiationStatus(Product, Id, Operation);
 

@@ -420,7 +420,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     ContractParameters["Currency"] = Currency;
                 }
 
-                ValidationResult validatedParameters = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency);                
+                ValidationResult validatedParameters = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency);
                 string Message = validatedParameters.ErrorMessage;
                 TabId = validatedParameters.TabId;
 
@@ -644,6 +644,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 if (contractParameters.TryGetValue("AccountName", out var accountNameObj))
                     result.AccountName = accountNameObj?.ToString();
 
+                if (contractParameters.TryGetValue("TokenId", out var tokenIdObj))
+                    result.TokenId = tokenIdObj?.ToString();
+
                 if (contractParameters.TryGetValue("SplitPaymentOptions", out var splitObj))
                 {
                     if (splitObj is not string s)
@@ -666,7 +669,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             throw new Exception($"Split payment total amount not valid: Expected: {amount} but: {total}");
                         }
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         throw;
                     }
@@ -680,6 +683,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 // Personal number extraction
                 result.PersonalNumber = GetPersonalNumber(identityProperties, contractParameters);
+                
 
                 // Message validation
                 if (contractParameters.TryGetValue("Message", out var messageObj) && messageObj is string message)
