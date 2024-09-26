@@ -662,6 +662,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                         };
 
                         result.SplitPaymentOptions = JsonSerializer.Deserialize<List<PaymentOption>>(s, options);
+                        result.SplitPaymentOptions = result.SplitPaymentOptions.Where(m => m.Amount > 0).ToList();
 
                         var total = result.SplitPaymentOptions.Sum(m => m.Amount);
                         if ((amount - total) > 0.1M)
