@@ -40,6 +40,10 @@ if exists(Posted) then
 	SetSetting("TAG.Payments.OpenPaymentsPlatform.TimeoutMinutes",Num(Posted.TimeoutMinutes));
 	SetSetting("TAG.Payments.OpenPaymentsPlatform.NotificationList",Posted.NotificationList);
 
+	SetSetting("TAG.Payments.OpenPaymentsPlatform.VaulterBankAccount",Posted.VaulterBankAccount);
+	SetSetting("TAG.Payments.OpenPaymentsPlatform.VaulterBankBic",Posted.VaulterBankBic);
+	SetSetting("TAG.Payments.OpenPaymentsPlatform.VaulterAccountName",Posted.VaulterAccountName);
+
 	if exists(Posted.Certificate_Binary) and Posted.Certificate_Binary.Length>0 then
 	(	
 		try
@@ -89,27 +93,27 @@ if exists(Posted) then
 </p>
 
 <p>
-<label for="Account">Bank Account: (IBAN)</label>  
+<label for="Account">TAG Bank Account: (IBAN)</label>  
 <input type="text" id="Account" name="Account" value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.Account","")}}' required title="Bank Account of Trust Provider to hold client funds. Must be an IBAN bank account number." pattern="^(SE\s*\d{2}\s*\d{3}\s*\d{16}\s*\d)|(FI\s*\d{2}\s*\d{3}\s*\d{11})|(DE\s*\d{2}\s*\d{8}\s*\d{10})|(DK\s*\d{2}\s*\d{4}\s*\d{9}\s*\d)|(GB\s*\d{2}\s*[A-Z]{4}\s*\d{6}\s*\d{8})|(NO\s*\d{2}\s*\d{4}\s*\d{6}\s*\d)$"/>
 </p>
 
 <p>
-<label for="AccountName">Name of account:</label>  
+<label for="AccountName">TAG Name of account:</label>  
 <input type="text" id="AccountName" name="AccountName" value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.AccountName","")}}' required title="Name of bank account."/>
 </p>
 
 <p>
-<label for="AccountBank">Bank: (BIC)</label>  
+<label for="AccountBank">TAG Bank: (BIC)</label>  
 <input type="text" id="AccountBank" name="AccountBank" value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.AccountBank","")}}' required title="Bank hosting the bank account. Must be a BIC bank identifier." pattern="^[A-Z]{4}(SE|FI|DE|DK|GB|NO)[A-Z0-9]{2}([A-Z0-9]{3})?$"/>
 </p>
 
 <p>
-<label for="PersonalID">Personal ID: (This person will authorize access to account.)</label>  
+<label for="PersonalID">TAG Personal ID: (This person will authorize access to TAG account.)</label>  
 <input type="text" id="PersonalID" name="PersonalID" value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.PersonalID","")}}' required title="Personal number of person that will authenticate payments made from the bank account."/>
 </p>
 
 <p>
-<label for="OrganizationID">Organization ID: (Optional. Organization owning the account, if not the person above.)</label>  
+<label for="OrganizationID">TAG Organization ID: (Optional. Organization owning the account, if not the person above.)</label>  
 <input type="text" id="OrganizationID" name="OrganizationID" value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.OrganizationID","")}}' title="Personal number of organization owning the account. Person above needs to be authorized to use the account."/>
 </p>
 
@@ -142,6 +146,21 @@ if exists(Posted) then
 <p>
 <label for="NotificationList">Notification recipients for payment authorizations:</label>  
 <input type="text" id="NotificationList" name="NotificationList" value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.NotificationList","")}}' title="Can be XMPP Addresses or e-mail addresses. Separate using semicolon if more than one."/>
+</p>
+
+<p>
+<label for="VaulterBankAccount">Vaulter bank account</label>  
+<input type="text" id="VaulterBankAccount" name="VaulterBankAccount" required value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.VaulterBankAccount","")}}' title="Vaulter bank account."/>
+</p>
+
+<p>
+<label for="VaulterBankBic">Vaulter account BIC</label>  
+<input type="text" id="VaulterBankBic" name="VaulterBankBic" required value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.VaulterBankBic","")}}' title="Bank hosting the bank account. Must be a BIC bank identifier." pattern="^[A-Z]{4}(SE|FI|DE|DK|GB|NO)[A-Z0-9]{2}([A-Z0-9]{3})?$"/>
+</p>
+
+<p>
+<label for="VaulterAccountName">Vaulter account name</label>  
+<input type="text" id="VaulterAccountName" name="VaulterAccountName" required value='{{GetSetting("TAG.Payments.OpenPaymentsPlatform.VaulterAccountName","")}}' title="Account name for vaulter"/>
 </p>
 
 <button type="submit" class="posButton">Apply</button>

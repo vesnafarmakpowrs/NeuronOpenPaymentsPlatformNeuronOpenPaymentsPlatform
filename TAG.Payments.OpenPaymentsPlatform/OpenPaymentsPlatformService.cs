@@ -1,11 +1,16 @@
 ﻿using Paiwise;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using TAG.Networking.OpenPaymentsPlatform;
 using TAG.Payments.OpenPaymentsPlatform.Models;
+using TAG.Payments.OpenPaymentsPlatform.Service;
 using Waher.Content;
 using Waher.Content.Markdown;
 using Waher.Events;
@@ -353,7 +358,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 {
                     case AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN:
                     case AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE:
-                        await RefreshQrCode(TabId, ChallengeData);
+                        await Payment.RefreshQrCode(TabId, ChallengeData);
                         break;
 
                     case AuthenticationMethodId.MBID:
@@ -363,7 +368,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
                             return;
                         }
 
-                        await RequestOpenBankIdApp(TabId, ChallengeData);
+                        await Payment.RequestOpenBankIdApp(TabId, ChallengeData);
                         break;
                 }
 
@@ -374,35 +379,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 Log.Error(ex);
                 throw;
             }
-        }
-
-        private async Task RequestOpenBankIdApp(string TabId, ChallengeData ChallengeData)
-        {
-            string eventMessage = JSON.Encode(new Dictionary<string, object>()
-                            {
-                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
-                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
-                                { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)}
-                            }, false);
-
-            Log.Informational(eventMessage);
-            await ClientEvents.PushEvent(new string[] { TabId }, "OpenBankIdApp", eventMessage, true);
-        }
-
-        private async Task RefreshQrCode(string TabId, ChallengeData ChallengeData)
-        {
-            string eventMessage = JSON.Encode(new Dictionary<string, object>()
-                            {
-                                { "BankIdUrl", ChallengeData.BankIdURL ?? string.Empty},
-                                { "MobileAppUrl",  GetMobileAppUrl(null, ChallengeData.AutoStartToken)},
-                                { "AutoStartToken", ChallengeData.AutoStartToken ?? string.Empty},
-                                { "ImageUrl",ChallengeData.ImageUrl ?? string.Empty},
-                                { "title", "Authorize recipient" },
-                                { "message", "Scan the following QR-code with your Bank-ID app, or click on it if your Bank-ID is installed on your computer." },
-                            }, false);
-
-            Log.Informational(eventMessage);
-            await ClientEvents.PushEvent(new string[] { TabId }, "ShowQRCode", eventMessage, true);
         }
 
         /// <summary>
@@ -422,8 +398,8 @@ namespace TAG.Payments.OpenPaymentsPlatform
         /// <param name="State">State object to pass on the callback method.</param>
         /// <returns>Result of operation.</returns>
         public async Task<PaymentResult> BuyEDaler(IDictionary<CaseInsensitiveString, object> ContractParameters,
-            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
+                    IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
+                    decimal Amount, string Currency, string SuccessUrl, string FailureUrl, string CancelUrl, ClientUrlEventHandler ClientUrlCallback, object State)
         {
             string TabId = string.Empty;
             OpenPaymentsPlatformClient Client = null;
@@ -444,9 +420,9 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     ContractParameters["Currency"] = Currency;
                 }
 
-                string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                    Amount, Currency, out CaseInsensitiveString PersonalNumber,
-                    out string BankAccount, out string TextMessage, out TabId, out string CallBackUrl, out bool RequestFromMobilePhone);
+                ValidationResult validatedParameters = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency);
+                string Message = validatedParameters.ErrorMessage;
+                TabId = validatedParameters.TabId;
 
                 if (!string.IsNullOrEmpty(Message))
                 {
@@ -467,15 +443,17 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     throw new Exception("Service not configured properly.");
                 }
 
-                string PersonalID = GetPersonalID(PersonalNumber);
+                string PersonalID = GetPersonalID(validatedParameters.PersonalNumber);
                 if (mode == OperationMode.Sandbox)
                 {
                     PersonalID = "";
                 }
 
                 KeyValuePair<IPAddress, PaymentResult> P = await GetRemoteEndpoint(Account);
-                if (!(P.Value is null))
+                if (P.Value is not null)
+                {
                     return P.Value;
+                }
 
                 IPAddress ClientIpAddress = P.Key;
 
@@ -489,7 +467,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 PaymentProduct Product;
 
-                if (Configuration.NeuronBankAccountIban.Substring(0, 2) == BankAccount.Substring(0, 2))
+                if (Configuration.NeuronBankAccountIban.Substring(0, 2) == validatedParameters.BankAccount.Substring(0, 2))
                 {
                     Product = PaymentProduct.domestic;
                 }
@@ -502,176 +480,24 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Product = PaymentProduct.international;
                 }
 
-                PaymentInitiationReference PaymentInitiationReference = await Client.CreatePaymentInitiation(
-                    Product, Amount, Currency, BankAccount, Currency,
-                    Configuration.NeuronBankAccountIban, Currency,
-                    Configuration.NeuronBankAccountName, TextMessage, Operation);
+                Payment payment = validatedParameters.SplitPaymentOptions.Any() ?
+                    new BulkPayment(Operation, Client, Product, State, SuccessUrl, ClientUrlCallback) :
+                    new SinglePayment(Operation, Client, Product, State, SuccessUrl, ClientUrlCallback);
 
-                AuthorizationInformation AuthorizationStatus = await Client.StartPaymentInitiationAuthorization(
-                    Product, PaymentInitiationReference.PaymentId, Operation,
-                    SuccessUrl, FailureUrl);
+                await payment.InitiatePayment(validatedParameters, Amount, Currency);
+                await Payment.NotifyTransactionState(TransactionState.TransactionCompleted, TabId);
 
-                AuthenticationMethod AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
-                    ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID);
-
-                if (RequestFromMobilePhone)
-                {
-                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE)
-                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID);
-                }
-                else
-                {
-                    AuthenticationMethod = AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_TOKEN)
-                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_ANIMATED_QR_IMAGE)
-                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID)
-                        ?? AuthorizationStatus.GetAuthenticationMethod(AuthenticationMethodId.MBID_SAME_DEVICE);
-                }
-
-                if (AuthenticationMethod is null)
-                {
-                    throw new Exception("Unable to find a Mobile Bank ID authorization method for the operation.");
-                }
-
-                PaymentServiceUserDataResponse PsuDataResponse = await Client.PutPaymentInitiationUserData(
-                    Product, PaymentInitiationReference.PaymentId,
-                    AuthorizationStatus.AuthorizationID, AuthenticationMethod.MethodId, Operation);
-
-                await RequestClientVerification(ClientUrlCallback,
-                    Client,
-                    PsuDataResponse.ChallengeData,
-                    PsuDataResponse.Links?.ScaOAuth,
-                    TabId,
-                    State, SuccessUrl, AuthenticationMethod);
-
-                TppMessage[] ErrorMessages = PsuDataResponse.Messages;
-                AuthorizationStatusValue AuthorizationStatusValue = PsuDataResponse.Status;
-                DateTime Start = DateTime.Now;
-
-                bool PaymentAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.started ||
-                        AuthorizationStatusValue == AuthorizationStatusValue.authenticationStarted;
-                bool CreditorAuthorizationStarted = AuthorizationStatusValue == AuthorizationStatusValue.authoriseCreditorAccountStarted;
-
-                while (AuthorizationStatusValue != AuthorizationStatusValue.finalised &&
-                    AuthorizationStatusValue != AuthorizationStatusValue.failed &&
-                    DateTime.Now.Subtract(Start).TotalMinutes < Configuration.TimeoutMinutes)
-                {
-                    await Task.Delay(Configuration.PollingIntervalSeconds);
-
-                    AuthorizationStatus P2 = await Client.GetPaymentInitiationAuthorizationStatus(
-                        Product, PaymentInitiationReference.PaymentId, AuthorizationStatus.AuthorizationID, Operation);
-
-                    AuthorizationStatusValue = P2.Status;
-                    ErrorMessages = P2.Messages;
-
-                    if (!string.IsNullOrEmpty(P2.ChallengeData?.BankIdURL))
-                    {
-                        switch (AuthorizationStatusValue)
-                        {
-                            case AuthorizationStatusValue.started:
-                            case AuthorizationStatusValue.authenticationStarted:
-
-                                if (!PaymentAuthorizationStarted)
-                                {
-                                    PaymentAuthorizationStarted = true;
-                                }
-
-                                await RequestClientVerification(ClientUrlCallback,
-                                        Client, P2.ChallengeData, null, TabId, State, SuccessUrl, AuthenticationMethod, !PaymentAuthorizationStarted);
-                                break;
-
-                            case AuthorizationStatusValue.authoriseCreditorAccountStarted:
-
-                                if (!CreditorAuthorizationStarted)
-                                {
-                                    CreditorAuthorizationStarted = true;
-                                }
-
-                                await RequestClientVerification(ClientUrlCallback,
-                                      Client, P2.ChallengeData, null, TabId, State, SuccessUrl, AuthenticationMethod, !CreditorAuthorizationStarted);
-                                break;
-                        }
-                    }
-                }
-
-                if (!(ErrorMessages is null) && ErrorMessages.Length > 0)
-                {
-                    throw new Exception(ErrorMessages[0].Text);
-                }
-
-                await NotifyTransactionState(TransactionState.TransactionInProgress, TabId);
-
-                PaymentTransactionStatus Status = await Client.GetPaymentInitiationStatus(Product, PaymentInitiationReference.PaymentId, Operation);
-
-                if (!(Status.Messages is null) && Status.Messages.Length > 0 &&
-                    (Status.Status == PaymentStatus.RJCT ||
-                    Status.Status == PaymentStatus.CANC))
-                {
-                    StringBuilder Msg = new StringBuilder();
-
-                    foreach (TppMessage TppMsg in Status.Messages)
-                    {
-                        Msg.AppendLine(TppMsg.Text);
-                    }
-
-                    string s = Msg.ToString().Trim();
-
-                    if (!string.IsNullOrEmpty(s))
-                    {
-                        throw new Exception(s);
-                    }
-                }
-
-                switch (Status.Status)
-                {
-                    case PaymentStatus.RJCT:
-                        throw new Exception("Payment was rejected.");
-
-                    case PaymentStatus.CANC:
-                        throw new Exception("Payment was cancelled.");
-                }
-
-                switch (AuthorizationStatusValue)
-                {
-                    case AuthorizationStatusValue.finalised:
-                        break;
-
-                    case AuthorizationStatusValue.failed:
-                        throw new Exception("Payment failed. (" + AuthorizationStatusValue.ToString() + ")");
-
-                    default:
-                        throw new Exception("Transaction took too long to complete.");
-                }
-
-                await NotifyTransactionState(TransactionState.TransactionCompleted, TabId);
                 return new PaymentResult(Amount, Currency);
             }
             catch (Exception ex)
             {
-                await NotifyTransactionState(TransactionState.TransactionFailed, TabId, ex.Message);
+                await Payment.NotifyTransactionState(TransactionState.TransactionFailed, TabId, ex.Message);
                 return new PaymentResult(ex.Message);
             }
             finally
             {
                 OpenPaymentsPlatformServiceProvider.Dispose(Client, this.mode);
             }
-        }
-
-        private async Task NotifyTransactionState(TransactionState TransactionState, string tabId, string errorMessage = null)
-        {
-            if (!string.IsNullOrEmpty(errorMessage))
-            {
-                Log.Error(new Exception(errorMessage));
-            }
-            if (string.IsNullOrEmpty(tabId))
-            {
-                return;
-            }
-
-            await ClientEvents.PushEvent(new string[] { tabId }, TransactionState.ToString(),
-                  JSON.Encode(new Dictionary<string, object>()
-                  {
-                      { "ErrorMessage", errorMessage ?? string.Empty }
-                  }, false), true);
         }
 
         private static string CheckJidHostedByServer(IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
@@ -746,128 +572,148 @@ namespace TAG.Payments.OpenPaymentsPlatform
             return new KeyValuePair<IPAddress, PaymentResult>(ClientIpAddress, null);
         }
 
-        private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
-            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
-            out string BankAccount, out string TextMessage, out string TabId, out string CallBackUrl, out bool RequestFromMobilePhone)
+        private ValidationResult ValidateParameters(
+            IDictionary<CaseInsensitiveString, object> contractParameters,
+            IDictionary<CaseInsensitiveString, CaseInsensitiveString> identityProperties,
+            decimal amount, string currency)
         {
-            PersonalNumber = null;
-            TextMessage = string.Empty;
-            BankAccount = string.Empty;
-            TabId = null;
-            CallBackUrl = string.Empty;
-            RequestFromMobilePhone = false;
+            var result = new ValidationResult();
 
-            if (!ContractParameters.TryGetValue("Amount", out object Obj))
-                return "Amount not available in contract.";
-
-            if (ContractParameters.TryGetValue("tabId", out object ObjTabId) && ObjTabId is string tabId)
-                TabId = tabId;
-
-            if (ContractParameters.TryGetValue("callBackUrl", out object ObjcallBackURL) && ObjcallBackURL is string callBackURL)
-                CallBackUrl = callBackURL;
-
-            if (ContractParameters.TryGetValue("requestFromMobilePhone", out object ObjIsMobile))
-                RequestFromMobilePhone = Convert.ToBoolean(ObjIsMobile);
-
-            if (!string.IsNullOrEmpty(TabId))
+            try
             {
-                Log.Informational("OPP TabId  " + TabId.ToString());
-            }
-
-            if (!(Obj is decimal ContractAmount))
-            {
-                try
+                // Helper method to extract and convert a parameter
+                string GetStringParameter(string key, string errorMessage)
                 {
-                    ContractAmount = Expression.ToDecimal(Obj);
+                    if (contractParameters.TryGetValue(key, out var value) && value is string strValue)
+                        return strValue;
+
+                    throw new Exception(errorMessage);
                 }
-                catch (Exception)
+
+                decimal GetDecimalParameter(string key, string errorMessage)
                 {
-                    return "Amount in contract not of the correct type. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
+                    if (contractParameters.TryGetValue(key, out var obj))
+                    {
+                        if (obj is decimal value)
+                            return value;
+
+                        try
+                        {
+                            return Expression.ToDecimal(obj);
+                        }
+                        catch
+                        {
+                            throw new Exception($"Value for {key} is not of the correct type. Value: {Expression.ToString(obj)}, Type: {obj?.GetType().FullName}");
+                        }
+                    }
+
+                    throw new Exception(errorMessage);
+                }
+
+                // Get mandatory parameters
+                var contractAmount = GetDecimalParameter("Amount", "Amount not available in contract.");
+                var contractCurrency = GetStringParameter("Currency", "Currency not available in contract.");
+                var contractAccount = GetStringParameter("Account", "Account not available in contract.");
+
+                // Validate amounts and currencies
+                if (contractAmount != amount)
+                    throw new Exception("Amount in contract does not match amount in call.");
+
+                if (contractCurrency != currency)
+                    throw new Exception("Currency in contract does not match currency in call.");
+
+                // Validate account
+                if (contractAccount.Length <= 2)
+                    throw new Exception("Invalid bank account.");
+
+                result.BankAccount = contractAccount;
+
+                // Optional parameters
+                if (contractParameters.TryGetValue("tabId", out var tabIdObj) && tabIdObj is string tabId)
+                    result.TabId = tabId;
+
+                if (contractParameters.TryGetValue("callBackUrl", out var callBackUrlObj) && callBackUrlObj is string callBackUrl)
+                    result.CallBackUrl = callBackUrl;
+
+                if (contractParameters.TryGetValue("requestFromMobilePhone", out var isMobileObj))
+                    result.RequestFromMobilePhone = Convert.ToBoolean(isMobileObj);
+
+                if (contractParameters.TryGetValue("isInstantPayment", out var isInstantPaymentObj))
+                    result.IsInstantPayment = Convert.ToBoolean(isInstantPaymentObj);
+
+                if (contractParameters.TryGetValue("AccountName", out var accountNameObj))
+                    result.AccountName = accountNameObj?.ToString();
+
+                if (contractParameters.TryGetValue("TokenId", out var tokenIdObj))
+                    result.TokenId = tokenIdObj?.ToString();
+
+                if (contractParameters.TryGetValue("SplitPaymentOptions", out var splitObj))
+                {
+                    if (splitObj is not string s)
+                    {
+                        throw new Exception("Split object must be a valid json string.");
+                    }
+
+                    try
+                    {
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true // Ignore case when matching properties
+                        };
+
+                        result.SplitPaymentOptions = JsonSerializer.Deserialize<List<PaymentOption>>(s, options);
+                        result.SplitPaymentOptions = result.SplitPaymentOptions.Where(m => m.Amount > 0).ToList();
+
+                        var total = result.SplitPaymentOptions.Sum(m => m.Amount);
+                        if ((amount - total) > 0.1M)
+                        {
+                            throw new Exception($"Split payment total amount not valid: Expected: {amount} but: {total}");
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+
+                if (result.SplitPaymentOptions.Any(m => string.IsNullOrEmpty(m.BankAccount) || string.IsNullOrEmpty(m.AccountName)
+                || string.IsNullOrEmpty(m.Description) || m.Amount <= 0))
+                {
+                    throw new Exception("SplitPaymentOptions are not valid...");
+                }
+
+                // Personal number extraction
+                result.PersonalNumber = GetPersonalNumber(identityProperties, contractParameters);
+                
+
+                // Message validation
+                if (contractParameters.TryGetValue("Message", out var messageObj) && messageObj is string message)
+                {
+                    message = message.Trim();
+                    if (message.Length > 10)
+                    {
+                        throw new Exception("Message cannot be longer than 10 characters.");
+                    }
+
+                    result.TextMessage = message;
                 }
             }
-
-            if (ContractAmount != Amount)
-                return "Amount in contract does not match amount in call.";
-
-            if (!ContractParameters.TryGetValue("Currency", out Obj))
-                return "Currency not available in contract.";
-
-            if (!(Obj is string ContractCurrency))
-                return "Currency in contract not of the correct type. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
-
-            if (ContractCurrency != Currency)
-                return "Currency in contract does not match currency in call.";
-
-            if (!ContractParameters.TryGetValue("Account", out Obj))
-                return "Account not available in contract.";
-
-            if (!(Obj is string ContractAccount))
-                return "Account in contract not of the correct type. Value: " + Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
-
-            if (ContractAccount.Length <= 2)
-                return "Invalid bank account.";
-
-            BankAccount = ContractAccount;
-
-            //User for payment link.
-            if (ContractParameters.TryGetValue("personalNumber", out object PersonalNumberObject) &&
-                PersonalNumberObject is string PersonalNumberString &&
-                !string.IsNullOrEmpty(PersonalNumberString))
+            catch (Exception ex)
             {
-                PersonalNumber = PersonalNumberString;
-            }
-            else
-            {
-                IdentityProperties.TryGetValue("PNR", out PersonalNumber);
+                result.ErrorMessage = ex.Message;
             }
 
-            if (string.IsNullOrEmpty(PersonalNumber))
-            {
-                return "Personal number missing in identity or contract parameters.";
-            }
-
-            Log.Informational("Personal number to authorize: " + PersonalNumber);
-
-            if (ContractParameters.TryGetValue("Message", out Obj))
-            {
-                if (!(Obj is string s))
-                    return "Message not a string. Value: " + Waher.Script.Expression.ToString(Obj) + ", Type: " + Obj?.GetType().FullName;
-
-                s = s.Trim();
-                if (s.Length > 10)
-                    return "Message cannot be longer than 10 characters.";
-
-                TextMessage = s;
-            }
-
-            return null;
+            return result;
         }
 
-        /// <summary>
-        /// Gets an URL that can be used to start the BankID app on a desptop.
-        /// </summary>
-        /// <param name="RedirectUrl">URL to redirect to.</param>
-        /// <returns>URL for starting a BankID app on a desktop.</returns>
-        public static string GetMobileAppUrl(string RedirectUrl, string AutoStartToken)
+        private string GetPersonalNumber(IDictionary<CaseInsensitiveString, CaseInsensitiveString> identityProperties,
+                                          IDictionary<CaseInsensitiveString, object> contractParameters)
         {
-            if (string.IsNullOrEmpty(AutoStartToken))
-            {
-                return string.Empty;
-            }
+            if (contractParameters.TryGetValue("personalNumber", out var personalNumberObj) && personalNumberObj is string personalNumber && !string.IsNullOrEmpty(personalNumber))
+                return personalNumber;
 
-            StringBuilder sb = new StringBuilder();
-
-            sb.Append("bankid:///?autostarttoken=");
-            sb.Append(System.Web.HttpUtility.UrlEncode(AutoStartToken));
-            sb.Append("&redirect=");
-
-            if (!string.IsNullOrEmpty(RedirectUrl))
-                sb.Append(System.Web.HttpUtility.UrlEncode(RedirectUrl));
-            else
-                sb.Append("null");
-
-            return sb.ToString();
+            identityProperties.TryGetValue("PNR", out var personalNumberKey);
+            return personalNumberKey;
         }
 
 
@@ -1315,19 +1161,29 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 ContractParameters["Currency"] = Currency;
             }
 
-            string Message = this.ValidateParameters(ContractParameters, IdentityProperties,
-                  Amount, Currency, out CaseInsensitiveString _,
-                  out string BankAccount, out string AccountName, out string TextMessage);
+            var validationResult = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency);
+            var Message = validationResult.ErrorMessage;
 
             if (!string.IsNullOrEmpty(Message))
             {
                 return new PaymentResult(Message);
             }
 
+            if (string.IsNullOrWhiteSpace(validationResult.AccountName))
+            {
+                return new PaymentResult("AccountName not available in contract parameters");
+            }
+
             Message = CheckJidHostedByServer(IdentityProperties, out CaseInsensitiveString Account);
             if (!string.IsNullOrEmpty(Message))
             {
                 return new PaymentResult(Message);
+            }
+
+            if (validationResult.IsInstantPayment)
+            {
+                Log.Informational("IsInstantPayment: eDaler destroyed without actual selling.");
+                return new PaymentResult(Amount, Currency);
             }
 
             OpenPaymentsPlatformClient Client = OpenPaymentsPlatformServiceProvider.CreateClient(Configuration, this.mode);
@@ -1354,7 +1210,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 PaymentProduct Product;
 
-                if (Configuration.NeuronBankAccountIban.Substring(0, 2) == BankAccount.Substring(0, 2))
+                if (Configuration.NeuronBankAccountIban.Substring(0, 2) == validationResult.BankAccount.Substring(0, 2))
                     Product = PaymentProduct.domestic;
                 else if (Currency.ToUpper() == "EUR")
                     Product = PaymentProduct.sepa_credit_transfers;
@@ -1364,7 +1220,7 @@ namespace TAG.Payments.OpenPaymentsPlatform
 
                 PaymentInitiationReference PaymentInitiationReference = await Client.CreatePaymentInitiation(
                     Product, Amount, Currency, Configuration.NeuronBankAccountIban, Currency,
-                    BankAccount, Currency, AccountName, TextMessage, Operation);
+                    validationResult.BankAccount, Currency, validationResult.AccountName, validationResult.TextMessage, Operation);
 
                 DateTime TP = DateTime.UtcNow;
                 OutboundPayment PaymentRecord = new OutboundPayment()
@@ -1382,10 +1238,10 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Currency = Currency,
                     FromBankAccount = Configuration.NeuronBankAccountIban,
                     FromBank = Operation.ServiceProvider,
-                    ToBankAccount = BankAccount,
+                    ToBankAccount = validationResult.BankAccount,
                     ToBank = this.service.BicFi,
-                    ToBankAccountName = AccountName,
-                    TextMessage = TextMessage
+                    ToBankAccountName = validationResult.AccountName,
+                    TextMessage = validationResult.TextMessage
                 };
 
                 await Database.Insert(PaymentRecord);
@@ -1416,16 +1272,16 @@ namespace TAG.Payments.OpenPaymentsPlatform
                 Markdown.Append(MarkdownDocument.Encode(Operation.ServiceProvider));
                 Markdown.AppendLine(" |");
                 Markdown.Append("| To Bank Account | ");
-                Markdown.Append(MarkdownDocument.Encode(BankAccount));
+                Markdown.Append(MarkdownDocument.Encode(validationResult.BankAccount));
                 Markdown.AppendLine(" |");
                 Markdown.Append("| To Bank | ");
                 Markdown.Append(MarkdownDocument.Encode(this.service.BicFi));
                 Markdown.AppendLine(" |");
                 Markdown.Append("| To | ");
-                Markdown.Append(MarkdownDocument.Encode(AccountName));
+                Markdown.Append(MarkdownDocument.Encode(validationResult.AccountName));
                 Markdown.AppendLine(" |");
                 Markdown.Append("| Message | ");
-                Markdown.Append(MarkdownDocument.Encode(TextMessage.Replace('\n', ' ').Replace('\r', ' ')));
+                Markdown.Append(MarkdownDocument.Encode(validationResult.TextMessage.Replace('\n', ' ').Replace('\r', ' ')));
                 Markdown.AppendLine(" |");
 
                 string MarkdownMessage = Markdown.ToString();
@@ -1473,26 +1329,6 @@ namespace TAG.Payments.OpenPaymentsPlatform
                     Log.Critical(ex.Message);
                 }
             });
-        }
-
-        private string ValidateParameters(IDictionary<CaseInsensitiveString, object> ContractParameters,
-            IDictionary<CaseInsensitiveString, CaseInsensitiveString> IdentityProperties,
-            decimal Amount, string Currency, out CaseInsensitiveString PersonalNumber,
-            out string BankAccount, out string AccountName, out string TextMessage)
-        {
-
-            AccountName = null;
-            string Msg = this.ValidateParameters(ContractParameters, IdentityProperties, Amount, Currency, out PersonalNumber,
-                out BankAccount, out TextMessage, out _, out _, out _);
-
-            if (!string.IsNullOrEmpty(Msg))
-                return Msg;
-
-            if (!ContractParameters.TryGetValue("AccountName", out object Obj))
-                return "Account Name not available in contract.";
-
-            AccountName = Obj?.ToString() ?? string.Empty;
-            return string.Empty;
         }
 
         /// <summary>
